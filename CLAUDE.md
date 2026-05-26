@@ -136,11 +136,11 @@ Check the resulting `stem.fls` OUTPUT lines: if `stem.sagetex.sage` appears, run
 
 **4b — latex passes with tex4ht.sty injection (HTML conversion)**
 
-Rather than invoking `htlatex` or `make4ht` as wrappers, we call `latex` directly, reproducing the tex4ht.sty injection preamble extracted from the htlatex script. The config string (`ximera,charset=utf-8,-css`) is embedded via `\RequirePackage[config,html]{tex4ht}` hooked into `\@documentclasshook`:
+Rather than invoking `htlatex` or `make4ht` as wrappers, we call `latex` directly, reproducing the tex4ht.sty injection preamble extracted from the htlatex script. The config string (`ximera,html5,charset=utf-8,-css`) is embedded via `\RequirePackage[config,html]{tex4ht}` hooked into `\@documentclasshook`:
 
 ```
 latex -recorder -interaction=nonstopmode -shell-escape -file-line-error \
-  "\makeatletter...\HCode ximera,charset=utf-8,-css.a.b.c.\input stem"
+  "\makeatletter...\HCode ximera,html5,charset=utf-8,-css.a.b.c.\input stem"
 ```
 
 The full injection preamble (from the htlatex source) is a fixed string with the config substituted in; it is stored as a constant in `compile.js`.

@@ -1,7 +1,7 @@
 import { execa } from 'execa';
 import path from 'path';
 
-const TEX_CONFIG = 'html5,ximera,charset=utf-8,-css';
+const TEX_CONFIG = 'ximera,charset=utf-8,-css';
 const TEX4HT_OPTIONS = ['-cunihtf', '-utf8'];
 const LATEX_FLAGS = [
   '-recorder',

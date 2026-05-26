@@ -10,7 +10,6 @@ const DEFAULTS = {
   workers: Math.max(1, Math.floor(os.cpus().length / 2)),
   passes: 2,
   clean: true,
-  sage: true,
   exclude: [],
 };
 
@@ -33,7 +32,6 @@ export function resolveConfig(userConfig = {}, configDir = process.cwd()) {
     workers: merged.workers,
     passes: merged.passes,
     clean: merged.clean,
-    sage: merged.sage,
     exclude: merged.exclude,
   };
 }

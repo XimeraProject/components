@@ -1,9 +1,5 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { writeFile, mkdir, rm } from 'fs/promises';
-import { mkdtemp } from 'fs/promises';
-import os from 'os';
-import path from 'path';
 import { tex4htArg, makeTexInputs, compile } from './compile.js';
 
 // Records all calls made through the fake runner.
@@ -16,7 +12,6 @@ function makeRecorder() {
 const BASE_CONFIG = {
   tex4npmTexmf: '/project/.tex4npm/texmf',
   passes: 2,
-  sage: false,
 };
 
 describe('tex4htArg', () => {
@@ -86,12 +81,6 @@ describe('compile call sequence', () => {
     assert.equal(calls.filter(c => c.cmd === 'latex').length, 3);
   });
 
-  it('does not call sage when config.sage is false', async () => {
-    const { calls, run } = makeRecorder();
-    await compile(texPath, { ...BASE_CONFIG, sage: false }, { run });
-    assert.ok(!calls.some(c => c.cmd === 'sage'));
-  });
-
   it('passes -recorder flag to pdflatex and latex', async () => {
     const { calls, run } = makeRecorder();
     await compile(texPath, BASE_CONFIG, { run });
@@ -106,26 +95,4 @@ describe('compile call sequence', () => {
     assert.ok(calls.find(c => c.cmd === 't4ht').args.includes('-f/stem'));
   });
 
-  it('calls sage and re-runs pdflatex when .fls lists sagetex output', async () => {
-    const dir = await mkdtemp(path.join(os.tmpdir(), 'tex4npm-sage-'));
-    try {
-      // Write a fake .fls with a sagetex OUTPUT line
-      await writeFile(
-        path.join(dir, 'sage-stem.fls'),
-        `PWD ${dir}\nOUTPUT ${path.join(dir, 'sage-stem.sagetex.sage')}\n`
-      );
-
-      const fakeTex = path.join(dir, 'sage-stem.tex');
-      const { calls, run: baseRun } = makeRecorder();
-
-      // After pdflatex is called the first time, the .fls is already on disk.
-      // The recorder doesn't create files, so we pre-wrote it above.
-      await compile(fakeTex, { ...BASE_CONFIG, sage: true }, { run: baseRun });
-
-      const cmds = calls.map(c => c.cmd);
-      assert.deepEqual(cmds, ['pdflatex', 'sage', 'pdflatex', 'latex', 'latex', 'tex4ht', 't4ht']);
-    } finally {
-      await rm(dir, { recursive: true, force: true });
-    }
-  });
 });

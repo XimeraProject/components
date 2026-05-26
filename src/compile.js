@@ -1,5 +1,4 @@
 import { execa } from 'execa';
-import { readFile } from 'fs/promises';
 import path from 'path';
 
 const TEX_CONFIG = 'ximera,charset=utf-8,-css';
@@ -53,12 +52,6 @@ export async function compile(texPath, config, { run = execa } = {}) {
   // pdflatex pass: tikzexport + .aux generation
   await run('pdflatex', [...LATEX_FLAGS, pdflatexArg], opts);
 
-  // Sage: if pdflatex wrote a .sagetex.sage file, run sage then re-run pdflatex
-  if (config.sage && await hasSagetex(dir, stem)) {
-    await run('sage', [`${stem}.sagetex.sage`], opts);
-    await run('pdflatex', [...LATEX_FLAGS, pdflatexArg], opts);
-  }
-
   // latex passes with tex4ht.sty injection (2 or 3, per config.passes)
   for (let i = 0; i < config.passes; i++) {
     await run('latex', [...LATEX_FLAGS, tex4htArg(stem)], opts);
@@ -71,15 +64,3 @@ export async function compile(texPath, config, { run = execa } = {}) {
   await run('t4ht', [`-f/${stem}`], opts);
 }
 
-async function hasSagetex(dir, stem) {
-  try {
-    const fls = await readFile(path.join(dir, `${stem}.fls`), 'utf8');
-    return fls.split('\n').some(line => {
-      const trimmed = line.trim();
-      return trimmed.startsWith('OUTPUT ') &&
-             trimmed.endsWith(`${stem}.sagetex.sage`);
-    });
-  } catch {
-    return false;
-  }
-}

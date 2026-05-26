@@ -12,7 +12,6 @@ describe('resolveConfig', () => {
     assert.equal(c.outDir, '/project/dist');
     assert.equal(c.passes, 2);
     assert.equal(c.clean, true);
-    assert.equal(c.sage, true);
     assert.deepEqual(c.exclude, []);
     assert.ok(c.workers >= 1);
   });
@@ -35,14 +34,13 @@ describe('resolveConfig', () => {
     assert.equal(c.tex4npmTexmf, '/project/.tex4npm/texmf');
   });
 
-  it('passes through workers, passes, clean, sage, exclude', () => {
+  it('passes through workers, passes, clean, exclude', () => {
     const c = resolveConfig({
-      workers: 8, passes: 3, clean: false, sage: false, exclude: ['drafts/**'],
+      workers: 8, passes: 3, clean: false, exclude: ['drafts/**'],
     }, '/project');
     assert.equal(c.workers, 8);
     assert.equal(c.passes, 3);
     assert.equal(c.clean, false);
-    assert.equal(c.sage, false);
     assert.deepEqual(c.exclude, ['drafts/**']);
   });
 

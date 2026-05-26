@@ -39,7 +39,6 @@ describe('watch', () => {
       tex4npmTexmf: path.join(root, '.tex4npm', 'texmf'),
       workers: 1,
       passes: 2,
-      sage: false,
       clean: true,
       exclude: [],
     };

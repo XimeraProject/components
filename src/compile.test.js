@@ -22,7 +22,7 @@ describe('tex4htArg', () => {
 
   it('ends with the config string and \\input STEM', () => {
     const arg = tex4htArg('mystem');
-    assert.ok(arg.includes('ximera,html5,charset=utf-8,-css.a.b.c.'));
+    assert.ok(arg.includes('html5,ximera,charset=utf-8,-css.a.b.c.'));
     assert.ok(arg.endsWith('\\input mystem'));
   });
 

@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseFls, partitionOutputs } from './artifacts.js';
+import { parseFls, partitionOutputs, parseLg } from './artifacts.js';
 
 const PROJECT_ROOT = '/home/jim/downloads';
 const TEX4NPM_TEXMF = '/home/jim/downloads/.tex4npm/texmf';
@@ -82,5 +82,34 @@ describe('partitionOutputs', () => {
   it('treats .html and .svg as artifacts', () => {
     const { artifacts } = partitionOutputs(['/p/a.html', '/p/b.svg', '/p/c.css']);
     assert.equal(artifacts.length, 3);
+  });
+});
+
+describe('parseLg', () => {
+  const SAMPLE_LG = `File: sample.html
+File: sample.tmp
+Font_Css("4"): .small-caps{font-variant: small-caps; }
+Font_Css("10"): .htf-cmbx {font-weight: bold; font-style:normal;}
+--- characters ---
+Font("cmr","10","10","100")
+`;
+
+  it('extracts File: entries', () => {
+    const files = parseLg(SAMPLE_LG, '/src');
+    assert.deepEqual(files, ['/src/sample.html', '/src/sample.tmp']);
+  });
+
+  it('ignores Font_Css, Font, and other lines', () => {
+    const files = parseLg(SAMPLE_LG, '/src');
+    assert.ok(files.every(f => f.endsWith('.html') || f.endsWith('.tmp')));
+  });
+
+  it('returns empty array when no File: lines exist', () => {
+    assert.deepEqual(parseLg('Font_Css("4"): .foo {}\n', '/src'), []);
+  });
+
+  it('resolves filenames relative to dir', () => {
+    const files = parseLg('File: out.html\n', '/my/dir');
+    assert.deepEqual(files, ['/my/dir/out.html']);
   });
 });

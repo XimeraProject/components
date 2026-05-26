@@ -1,6 +1,9 @@
-import { describe, it } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { tex4htArg, makeTexInputs, compile, parseTex4htStdout } from './compile.js';
+import { mkdtemp, writeFile, rm } from 'fs/promises';
+import os from 'os';
+import path from 'path';
+import { tex4htArg, makeTexInputs, compile } from './compile.js';
 
 // Records all calls made through the fake runner.
 function makeRecorder() {
@@ -64,11 +67,19 @@ describe('makeTexInputs', () => {
 });
 
 describe('compile call sequence', () => {
-  const texPath = '/project/chapter1/stem.tex';
+  let dir;
+  before(async () => {
+    dir = await mkdtemp(path.join(os.tmpdir(), 'tex4npm-compile-'));
+    // compile() reads stem.lg after tex4ht runs; pre-create it for the recorder tests
+    await writeFile(path.join(dir, 'stem.lg'), 'File: stem.html\n');
+  });
+  after(() => rm(dir, { recursive: true, force: true }));
+
+  const makeTexPath = () => path.join(dir, 'stem.tex');
 
   it('calls pdflatex, then latex×passes, then tex4ht, then t4ht', async () => {
     const { calls, run } = makeRecorder();
-    await compile(texPath, { ...BASE_CONFIG, passes: 2 }, { run });
+    await compile(makeTexPath(), { ...BASE_CONFIG, passes: 2 }, { run });
 
     assert.equal(calls[0].cmd, 'pdflatex');
     assert.equal(calls[1].cmd, 'latex');
@@ -80,49 +91,36 @@ describe('compile call sequence', () => {
 
   it('runs latex three times when passes: 3', async () => {
     const { calls, run } = makeRecorder();
-    await compile(texPath, { ...BASE_CONFIG, passes: 3 }, { run });
+    await compile(makeTexPath(), { ...BASE_CONFIG, passes: 3 }, { run });
     assert.equal(calls.filter(c => c.cmd === 'latex').length, 3);
   });
 
   it('passes -recorder flag to pdflatex and latex', async () => {
     const { calls, run } = makeRecorder();
-    await compile(texPath, BASE_CONFIG, { run });
+    await compile(makeTexPath(), BASE_CONFIG, { run });
     const latexCalls = calls.filter(c => c.cmd === 'pdflatex' || c.cmd === 'latex');
     assert.ok(latexCalls.every(c => c.args.includes('-recorder')));
   });
 
   it('passes -f/stem to tex4ht and t4ht', async () => {
     const { calls, run } = makeRecorder();
-    await compile(texPath, BASE_CONFIG, { run });
+    await compile(makeTexPath(), BASE_CONFIG, { run });
     assert.ok(calls.find(c => c.cmd === 'tex4ht').args.includes('-f/stem'));
     assert.ok(calls.find(c => c.cmd === 't4ht').args.includes('-f/stem'));
   });
 
   it('does not pass modified TEXINPUTS to tex4ht or t4ht', async () => {
     const { calls, run } = makeRecorder();
-    await compile(texPath, BASE_CONFIG, { run });
+    await compile(makeTexPath(), BASE_CONFIG, { run });
     const tex4htCall = calls.find(c => c.cmd === 'tex4ht');
     const t4htCall = calls.find(c => c.cmd === 't4ht');
     assert.ok(!tex4htCall.opts?.env?.TEXINPUTS);
     assert.ok(!t4htCall.opts?.env?.TEXINPUTS);
   });
-});
 
-describe('parseTex4htStdout', () => {
-  it('extracts file names from tex4ht stdout', () => {
-    const stdout = '[1 file sample.html\n file sample.tmp\n]\n';
-    const files = parseTex4htStdout(stdout, '/src');
-    assert.deepEqual(files, ['/src/sample.html', '/src/sample.tmp']);
-  });
-
-  it('returns empty array for stdout with no file lines', () => {
-    assert.deepEqual(parseTex4htStdout('', '/src'), []);
-    assert.deepEqual(parseTex4htStdout('tex4ht banner\n', '/src'), []);
-  });
-
-  it('handles multiple pages', () => {
-    const stdout = '[1 file a.html\n]\n[2 file b.html\n]\n';
-    const files = parseTex4htStdout(stdout, '/src');
-    assert.deepEqual(files, ['/src/a.html', '/src/b.html']);
+  it('returns files listed in stem.lg', async () => {
+    const { run } = makeRecorder();
+    const files = await compile(makeTexPath(), BASE_CONFIG, { run });
+    assert.ok(files.some(f => f.endsWith('stem.html')));
   });
 });

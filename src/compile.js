@@ -1,5 +1,6 @@
 import { execa } from 'execa';
 import path from 'path';
+import { parseLgFile } from './artifacts.js';
 
 const TEX_CONFIG = 'ximera,charset=utf-8,-css';
 const TEX4HT_OPTIONS = ['-cunihtf', '-utf8'];
@@ -32,18 +33,6 @@ export function makeTexInputs(tex4npmTexmf) {
   return `${tex4npmTexmf}//:${existing}`;
 }
 
-// Parse the file list from tex4ht's stdout.
-// tex4ht prints lines like "file sample.html" and "file sample.tmp"
-// inside [...] blocks for each page — these are the files it wrote.
-export function parseTex4htStdout(stdout, dir) {
-  const files = [];
-  for (const line of stdout.split('\n')) {
-    // Lines take two forms: "[1 file name.html" and " file name.tmp"
-    const m = line.match(/\bfile\s+(\S+)/);
-    if (m) files.push(path.join(dir, m[1]));
-  }
-  return files;
-}
 
 // Compile a single .tex file through the full pipeline:
 //   pdflatex → latex×passes → tex4ht → t4ht
@@ -76,9 +65,11 @@ export async function compile(texPath, config, { run = execa } = {}) {
     await run('latex', [...LATEX_FLAGS, tex4htArg(stem)], latexOpts);
   }
 
-  // tex4ht: DVI → HTML. Stdout lists the files it produced.
-  const { stdout } = await run('tex4ht', [`-f/${stem}`, ...TEX4HT_OPTIONS], tex4htOpts);
-  const tex4htFiles = parseTex4htStdout(stdout ?? '', dir);
+  // tex4ht: DVI → HTML. Writes stem.lg listing its output files.
+  await run('tex4ht', [`-f/${stem}`, ...TEX4HT_OPTIONS], tex4htOpts);
+
+  // Read .lg before t4ht so we have the authoritative file list from tex4ht.
+  const tex4htFiles = await parseLgFile(path.join(dir, `${stem}.lg`), dir);
 
   // t4ht: post-processing (.lg → CSS, images, etc.)
   await run('t4ht', [`-f/${stem}`], tex4htOpts);

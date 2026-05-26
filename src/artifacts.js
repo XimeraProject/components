@@ -57,11 +57,22 @@ export async function deleteTemps(temps) {
   })));
 }
 
-// TODO: implement once a real .lg file is available to inspect.
-// The .lg file is written by tex4ht and lists all HTML/CSS/image files
-// it produced — the artifact manifest for the tex4ht/t4ht side.
-export function parseLg(_content) {
-  throw new Error('parseLg not yet implemented — need a real .lg example');
+// Parse a .lg file written by tex4ht.
+// "File: name" lines list every file tex4ht produced.
+// Other lines (Font_Css, Font, --- characters ---, etc.) are metadata for t4ht
+// and are ignored for artifact collection.
+export function parseLg(content, dir) {
+  const files = [];
+  for (const line of content.split('\n')) {
+    const m = line.match(/^File:\s*(\S+)/);
+    if (m) files.push(path.join(dir, m[1]));
+  }
+  return files;
+}
+
+export async function parseLgFile(lgPath, dir) {
+  const content = await readFile(lgPath, 'utf8');
+  return parseLg(content, dir);
 }
 
 export async function parseFlsFile(flsPath, projectRoot, tex4npmTexmf) {

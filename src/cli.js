@@ -22,25 +22,33 @@ function toOutPath(texPath, root, outDir) {
 // Compile one file: throttle only the execa subprocess calls through the queue;
 // artifact copy and HTML post-processing run immediately after, outside the queue.
 async function compileFile(texPath, config, queue) {
-  await queue.add(() => compile(texPath, config));
+  // tex4htFiles: files written by the tex4ht binary (html, tmp, etc.)
+  const tex4htFiles = await queue.add(() => compile(texPath, config));
 
   const dir = path.dirname(texPath);
   const stem = path.basename(texPath, '.tex');
+
+  // .fls covers inputs (for dependency metadata) and latex-side outputs (temps).
   const { inputs, outputs } = await parseFlsFile(
     path.join(dir, `${stem}.fls`),
     config.root,
     config.tex4npmTexmf
   );
-  const { artifacts, temps } = partitionOutputs(outputs);
+  const { artifacts: flsArtifacts, temps } = partitionOutputs(outputs);
 
-  await copyArtifacts(artifacts, config.root, config.outDir);
+  // tex4ht artifacts (html, svg, png, css…) come from compile()'s return value,
+  // not from .fls — tex4ht doesn't use -recorder.
+  const { artifacts: tex4htArtifacts, temps: tex4htTemps } =
+    partitionOutputs(tex4htFiles ?? []);
+
+  await copyArtifacts([...flsArtifacts, ...tex4htArtifacts], config.root, config.outDir);
 
   const htmlOut = toOutPath(texPath, config.root, config.outDir);
   if (existsSync(htmlOut)) {
     await postprocess(htmlOut, inputs, config.root, config.outDir);
   }
 
-  await deleteTemps(temps);
+  await deleteTemps([...temps, ...tex4htTemps]);
 }
 
 // Compile a batch of .tex files with concurrency capped at config.workers.

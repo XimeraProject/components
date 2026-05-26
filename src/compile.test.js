@@ -1,11 +1,14 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { tex4htArg, makeTexInputs, compile } from './compile.js';
+import { tex4htArg, makeTexInputs, compile, parseTex4htStdout } from './compile.js';
 
 // Records all calls made through the fake runner.
 function makeRecorder() {
   const calls = [];
-  const run = async (cmd, args, _opts) => { calls.push({ cmd, args }); };
+  const run = async (cmd, args, opts) => {
+    calls.push({ cmd, args, opts });
+    return { stdout: '', stderr: '' };
+  };
   return { calls, run };
 }
 
@@ -95,4 +98,31 @@ describe('compile call sequence', () => {
     assert.ok(calls.find(c => c.cmd === 't4ht').args.includes('-f/stem'));
   });
 
+  it('does not pass modified TEXINPUTS to tex4ht or t4ht', async () => {
+    const { calls, run } = makeRecorder();
+    await compile(texPath, BASE_CONFIG, { run });
+    const tex4htCall = calls.find(c => c.cmd === 'tex4ht');
+    const t4htCall = calls.find(c => c.cmd === 't4ht');
+    assert.ok(!tex4htCall.opts?.env?.TEXINPUTS);
+    assert.ok(!t4htCall.opts?.env?.TEXINPUTS);
+  });
+});
+
+describe('parseTex4htStdout', () => {
+  it('extracts file names from tex4ht stdout', () => {
+    const stdout = '[1 file sample.html\n file sample.tmp\n]\n';
+    const files = parseTex4htStdout(stdout, '/src');
+    assert.deepEqual(files, ['/src/sample.html', '/src/sample.tmp']);
+  });
+
+  it('returns empty array for stdout with no file lines', () => {
+    assert.deepEqual(parseTex4htStdout('', '/src'), []);
+    assert.deepEqual(parseTex4htStdout('tex4ht banner\n', '/src'), []);
+  });
+
+  it('handles multiple pages', () => {
+    const stdout = '[1 file a.html\n]\n[2 file b.html\n]\n';
+    const files = parseTex4htStdout(stdout, '/src');
+    assert.deepEqual(files, ['/src/a.html', '/src/b.html']);
+  });
 });

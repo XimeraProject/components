@@ -32,16 +32,35 @@ export function makeTexInputs(tex4npmTexmf) {
   return `${tex4npmTexmf}//:${existing}`;
 }
 
+// Parse the file list from tex4ht's stdout.
+// tex4ht prints lines like "file sample.html" and "file sample.tmp"
+// inside [...] blocks for each page — these are the files it wrote.
+export function parseTex4htStdout(stdout, dir) {
+  const files = [];
+  for (const line of stdout.split('\n')) {
+    // Lines take two forms: "[1 file name.html" and " file name.tmp"
+    const m = line.match(/\bfile\s+(\S+)/);
+    if (m) files.push(path.join(dir, m[1]));
+  }
+  return files;
+}
+
 // Compile a single .tex file through the full pipeline:
-//   pdflatex → (sage →) pdflatex → latex×passes → tex4ht → t4ht
+//   pdflatex → latex×passes → tex4ht → t4ht
+//
+// Returns the list of files tex4ht wrote to the source directory.
 //
 // run: injectable subprocess executor (defaults to execa). Tests pass a
 // recording fake to verify the call sequence without spawning real processes.
 export async function compile(texPath, config, { run = execa } = {}) {
   const dir = path.dirname(texPath);
   const stem = path.basename(texPath, '.tex');
-  const env = { ...process.env, TEXINPUTS: makeTexInputs(config.tex4npmTexmf) };
-  const opts = { cwd: dir, env };
+
+  // Only latex/pdflatex need the augmented TEXINPUTS to find staged .sty files.
+  // tex4ht and t4ht use their own search paths and must not get a modified env.
+  const latexEnv = { ...process.env, TEXINPUTS: makeTexInputs(config.tex4npmTexmf) };
+  const latexOpts = { cwd: dir, env: latexEnv };
+  const tex4htOpts = { cwd: dir };
 
   const pdflatexArg =
     `\\PassOptionsToClass{tikzexport}{ximera}` +
@@ -50,17 +69,20 @@ export async function compile(texPath, config, { run = execa } = {}) {
     `\\nonstopmode\\input{${stem}}`;
 
   // pdflatex pass: tikzexport + .aux generation
-  await run('pdflatex', [...LATEX_FLAGS, pdflatexArg], opts);
+  await run('pdflatex', [...LATEX_FLAGS, pdflatexArg], latexOpts);
 
   // latex passes with tex4ht.sty injection (2 or 3, per config.passes)
   for (let i = 0; i < config.passes; i++) {
-    await run('latex', [...LATEX_FLAGS, tex4htArg(stem)], opts);
+    await run('latex', [...LATEX_FLAGS, tex4htArg(stem)], latexOpts);
   }
 
-  // tex4ht: DVI → HTML
-  await run('tex4ht', [`-f/${stem}`, ...TEX4HT_OPTIONS], opts);
+  // tex4ht: DVI → HTML. Stdout lists the files it produced.
+  const { stdout } = await run('tex4ht', [`-f/${stem}`, ...TEX4HT_OPTIONS], tex4htOpts);
+  const tex4htFiles = parseTex4htStdout(stdout ?? '', dir);
 
   // t4ht: post-processing (.lg → CSS, images, etc.)
-  await run('t4ht', [`-f/${stem}`], opts);
+  await run('t4ht', [`-f/${stem}`], tex4htOpts);
+
+  return tex4htFiles;
 }
 

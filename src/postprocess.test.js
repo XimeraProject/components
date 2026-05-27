@@ -8,6 +8,7 @@ import {
   removeEmptyParas, injectDependencyMeta, isXourse,
   removeSpuriousAnchors, enrichActivityLinks, postprocess,
   injectXmjax, injectXmcss, filterXmjaxCommands,
+  extractAnswerBlanks, stripOldXimeraScripts, markBlockingProblems,
 } from './postprocess.js';
 
 describe('removeEmptyParas', () => {
@@ -267,6 +268,95 @@ describe('injectXmcss', () => {
     const $ = load('<html><body><div class="preamble"></div></body></html>');
     await injectXmcss($, xmcssPath);
     assert.equal($('div.preamble style').length, 0);
+  });
+});
+
+describe('extractAnswerBlanks', () => {
+  it('extracts \\answer{VALUE} from a mathjax-inline span', () => {
+    const $ = load('<span class="mathjax-inline">\\(x = \\answer{7}\\)</span>');
+    extractAnswerBlanks($);
+    assert.equal($('.answer.respondable').length, 1);
+    assert.equal($('.answer.respondable').attr('data-correct-text'), '7');
+  });
+
+  it('replaces \\answer with \\square in the math', () => {
+    const $ = load('<span class="mathjax-inline">\\(x = \\answer{7}\\)</span>');
+    extractAnswerBlanks($);
+    assert.ok($('span.mathjax-inline').html().includes('\\square'));
+    assert.ok(!$('span.mathjax-inline').html().includes('\\answer'));
+  });
+
+  it('assigns a unique id to each respondable span', () => {
+    const $ = load(
+      '<span class="mathjax-inline">\\(\\answer{3}\\)</span>' +
+      '<span class="mathjax-inline">\\(\\answer{5}\\)</span>'
+    );
+    extractAnswerBlanks($);
+    const ids = $('.answer.respondable').map((_, el) => $(el).attr('id')).toArray();
+    assert.equal(new Set(ids).size, 2);
+  });
+
+  it('handles \\answer with optional argument', () => {
+    const $ = load('<span class="mathjax-inline">\\(\\answer[given]{42}\\)</span>');
+    extractAnswerBlanks($);
+    assert.equal($('.answer.respondable').attr('data-correct-text'), '42');
+  });
+
+  it('leaves spans with no \\answer unchanged', () => {
+    const $ = load('<span class="mathjax-inline">\\(x^2 + 1\\)</span>');
+    extractAnswerBlanks($);
+    assert.equal($('.answer.respondable').length, 0);
+  });
+});
+
+describe('stripOldXimeraScripts', () => {
+  it('removes ximera.osu.edu script and link tags', () => {
+    const $ = load(
+      '<head>' +
+      '<link href="https://ximera.osu.edu/public/stylesheets/standalone.css" rel="stylesheet">' +
+      '<script src="https://ximera.osu.edu/public/javascripts/standalone.min.js"></script>' +
+      '</head>'
+    );
+    stripOldXimeraScripts($);
+    assert.equal($('link[href*="ximera.osu.edu"]').length, 0);
+    assert.equal($('script[src*="ximera.osu.edu"]').length, 0);
+  });
+
+  it('leaves unrelated tags intact', () => {
+    const $ = load('<link rel="stylesheet" href="/other.css"><script src="/other.js"></script>');
+    stripOldXimeraScripts($);
+    assert.equal($('link').length, 1);
+    assert.equal($('script').length, 1);
+  });
+});
+
+describe('markBlockingProblems', () => {
+  it('adds data-blocking to a problem that contains an answer blank', () => {
+    const $ = load(
+      '<div class="problem-environment problem" id="p1">' +
+        '<span class="answer respondable" id="a1"></span>' +
+      '</div>'
+    );
+    markBlockingProblems($);
+    assert.ok($('#p1').attr('data-blocking') !== undefined);
+  });
+
+  it('adds data-blocking to a problem with a multiple-choice', () => {
+    const $ = load(
+      '<div class="problem-environment problem" id="p1">' +
+        '<div class="multiple-choice" id="mc1"></div>' +
+      '</div>'
+    );
+    markBlockingProblems($);
+    assert.ok($('#p1').attr('data-blocking') !== undefined);
+  });
+
+  it('does not add data-blocking to problems with no answerables', () => {
+    const $ = load(
+      '<div class="problem-environment problem" id="p1"><p>Just text.</p></div>'
+    );
+    markBlockingProblems($);
+    assert.equal($('#p1').attr('data-blocking'), undefined);
   });
 });
 

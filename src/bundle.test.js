@@ -26,6 +26,16 @@ describe('makeBuildOptions', () => {
     const opts = makeBuildOptions('/entry.js', '/dist');
     assert.equal(opts.bundle, true);
   });
+
+  it('passes nodePaths through to the options', () => {
+    const opts = makeBuildOptions('/entry.js', '/dist', ['/project/node_modules']);
+    assert.deepEqual(opts.nodePaths, ['/project/node_modules']);
+  });
+
+  it('defaults nodePaths to an empty array', () => {
+    const opts = makeBuildOptions('/entry.js', '/dist');
+    assert.deepEqual(opts.nodePaths, []);
+  });
 });
 
 describe('bundle (integration)', () => {
@@ -42,7 +52,7 @@ describe('bundle (integration)', () => {
       path.join(dir, '.tex4npm', 'bundle-entry.js'),
       'export const x = 42;\n'
     );
-    await bundle({ tex4npmDir: path.join(dir, '.tex4npm'), outDir: path.join(dir, 'dist') });
+    await bundle({ tex4npmDir: path.join(dir, '.tex4npm'), outDir: path.join(dir, 'dist'), configDir: dir });
     await assert.doesNotReject(() => access(path.join(dir, 'dist', 'ximera.js')));
   });
 
@@ -53,7 +63,7 @@ describe('bundle (integration)', () => {
       path.join(dir, '.tex4npm', 'bundle-entry.js'),
       `import './test.css';\n`
     );
-    await bundle({ tex4npmDir: path.join(dir, '.tex4npm'), outDir: path.join(dir, 'dist') });
+    await bundle({ tex4npmDir: path.join(dir, '.tex4npm'), outDir: path.join(dir, 'dist'), configDir: dir });
     await assert.doesNotReject(() => access(path.join(dir, 'dist', 'ximera.css')));
   });
 
@@ -62,7 +72,7 @@ describe('bundle (integration)', () => {
       path.join(dir, '.tex4npm', 'bundle-entry.js'),
       'globalThis.__tex4npm_loaded = true;\n'
     );
-    await bundle({ tex4npmDir: path.join(dir, '.tex4npm'), outDir: path.join(dir, 'dist') });
+    await bundle({ tex4npmDir: path.join(dir, '.tex4npm'), outDir: path.join(dir, 'dist'), configDir: dir });
     const { readFile } = await import('fs/promises');
     const js = await readFile(path.join(dir, 'dist', 'ximera.js'), 'utf8');
     assert.ok(js.includes('__tex4npm_loaded'));

@@ -12,6 +12,10 @@ export async function postprocess(htmlPath, flsInputs, projectRoot, outDir, { xm
   await injectDependencyMeta($, flsInputs, projectRoot);
   if (xmjaxPath) await injectXmjax($, xmjaxPath);
   if (xmcssPath) await injectXmcss($, xmcssPath);
+  stripOldXimeraScripts($);
+  extractAnswerBlanks($);
+  markBlockingProblems($);
+  injectBundleRefs($, htmlPath, outDir);
 
   if (isXourse($)) {
     removeSpuriousAnchors($);
@@ -104,6 +108,82 @@ export async function injectXmcss($, xmcssPath) {
   if (!raw.trim()) return;
   const css = raw.replace(/\\%/g, '%');
   $('div.preamble').append(`<style type="text/css">\n${css}\n</style>`);
+}
+
+// Find \answer{VALUE} patterns inside <span class="mathjax-inline"> elements.
+// tex4ht's mathjax mode passes the entire math expression as raw LaTeX, so
+// \answer never gets converted to HTML by tex4ht. We extract the correct-answer
+// value here and insert a <span class="answer respondable"> after the math span.
+// The \answer call is replaced with \square so MathJax shows a visible placeholder.
+export function extractAnswerBlanks($) {
+  const ANSWER_RE = /\\answer\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}/g;
+  let counter = 0;
+
+  $('span.mathjax-inline').each((_, el) => {
+    const $el = $(el);
+    let html = $el.html();
+    const matches = [...html.matchAll(ANSWER_RE)];
+    if (matches.length === 0) return;
+
+    // Walk matches in reverse so slice indices stay valid as we replace
+    const toInsert = [];
+    for (let i = matches.length - 1; i >= 0; i--) {
+      const m = matches[i];
+      const correctText = m[1].trim();
+      const answerId = `ximera-answer-${++counter}`;
+      html = html.slice(0, m.index) + '\\square' + html.slice(m.index + m[0].length);
+      toInsert.unshift({ answerId, correctText });
+    }
+    $el.html(html);
+
+    // Insert respondable spans immediately after the math span, in order
+    let $anchor = $el;
+    for (const { answerId, correctText } of toInsert) {
+      const $span = $(`<span class="answer respondable" id="${answerId}" data-correct-text="${correctText.replace(/"/g, '&quot;')}"></span>`);
+      $anchor.after($span);
+      $anchor = $span;
+    }
+  });
+}
+
+// Remove the old ximera.osu.edu CDN <script> and <link> tags injected by ximera.cfg.
+// These belong to the old jQuery/xake system; the new ximera.js bundle replaces them.
+export function stripOldXimeraScripts($) {
+  $('link[href*="ximera.osu.edu"]').remove();
+  $('script[src*="ximera.osu.edu"]').remove();
+}
+
+// Add data-blocking="" to every .problem-environment that directly contains at
+// least one answerable (.answer.respondable, .multiple-choice, .select-all).
+// Top-level problems (no .problem-environment ancestor) are left without the
+// attribute so the runtime treats them as available from the start.
+export function markBlockingProblems($) {
+  // Process innermost problems first (reverse document order) so that a parent
+  // problem's answerables include any that were already marked in children.
+  const problems = $('div.problem-environment').toArray().reverse();
+  for (const el of problems) {
+    const $el = $(el);
+    // "Direct" answerables: not nested inside a child .problem-environment
+    const hasAnswerable = (
+      $el.find('.answer.respondable').filter((_, a) =>
+        $(a).closest('.problem-environment').is(el)
+      ).length > 0 ||
+      $el.find('.multiple-choice, .select-all').filter((_, mc) =>
+        $(mc).closest('.problem-environment').is(el)
+      ).length > 0
+    );
+    if (hasAnswerable) $el.attr('data-blocking', '');
+  }
+}
+
+// Inject <link> and <script defer> tags pointing to the ximera.js/css bundle.
+// Paths are relative from the HTML file's location to outDir.
+export function injectBundleRefs($, htmlPath, outDir) {
+  const htmlDir = path.dirname(htmlPath);
+  const jsRel = path.relative(htmlDir, path.join(outDir, 'ximera.js'));
+  const cssRel = path.relative(htmlDir, path.join(outDir, 'ximera.css'));
+  $('head').append(`<link rel="stylesheet" href="${cssRel}">`);
+  $('body').append(`<script defer src="${jsRel}"></script>`);
 }
 
 // For each <a class="activity" href="something.tex"> in a xourse file:

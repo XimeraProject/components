@@ -7,6 +7,7 @@ import path from 'path';
 import {
   removeEmptyParas, injectDependencyMeta, isXourse,
   removeSpuriousAnchors, enrichActivityLinks, postprocess,
+  injectXmjax, injectXmcss, filterXmjaxCommands,
 } from './postprocess.js';
 
 describe('removeEmptyParas', () => {
@@ -149,6 +150,123 @@ describe('enrichActivityLinks', () => {
     const $ = load(`<a class="activity" href="https://example.com">x</a>`);
     await enrichActivityLinks($, path.join(outDir, 'main.html'), root, outDir);
     assert.equal($('a.activity').find('h2').length, 0);
+  });
+});
+
+describe('filterXmjaxCommands', () => {
+  it('keeps \\newcommand lines', () => {
+    const result = filterXmjaxCommands('\\newcommand {\\foo}[1]{#1}\n');
+    assert.ok(result.includes('\\newcommand'));
+  });
+
+  it('keeps \\DeclareMathOperator lines', () => {
+    const result = filterXmjaxCommands('\\DeclareMathOperator {\\Re}{Re}\n');
+    assert.ok(result.includes('\\DeclareMathOperator'));
+  });
+
+  it('keeps \\newenvironment lines', () => {
+    const result = filterXmjaxCommands('\\newenvironment {prompt}{}{}\n');
+    assert.ok(result.includes('\\newenvironment'));
+  });
+
+  it('removes lines containing : * or @', () => {
+    const result = filterXmjaxCommands(
+      '\\newcommand {\\:foo}[0]{}\n\\newcommand {\\bar}[0]{}\n'
+    );
+    assert.ok(!result.includes('\\:foo'));
+    assert.ok(result.includes('\\bar'));
+  });
+
+  it('removes lines containing \\label', () => {
+    const result = filterXmjaxCommands(
+      '\\newcommand {\\baz}[1]{\\label{##1}}\n\\newcommand {\\ok}[0]{}\n'
+    );
+    assert.ok(!result.includes('\\baz'));
+    assert.ok(result.includes('\\ok'));
+  });
+
+  it('replaces ##N with #N', () => {
+    const result = filterXmjaxCommands('\\newcommand {\\foo}[2]{##1 ##2}\n');
+    assert.ok(result.includes('#1 #2'));
+    assert.ok(!result.includes('##'));
+  });
+
+  it('drops lines that do not start with a recognised prefix', () => {
+    const result = filterXmjaxCommands('\\renewcommand {\\foo}{}\n');
+    assert.equal(result.trim(), '');
+  });
+});
+
+describe('injectXmjax', () => {
+  let dir;
+  before(async () => {
+    dir = await mkdtemp(path.join(os.tmpdir(), 'tex4npm-xmjax-'));
+  });
+  after(() => rm(dir, { recursive: true, force: true }));
+
+  it('prepends a math/tex script into div.preamble', async () => {
+    const xmjaxPath = path.join(dir, 'sample.xmjax');
+    await writeFile(xmjaxPath, '\\newcommand {\\foo}[0]{bar}\n');
+    const $ = load('<html><body><div class="preamble"></div></body></html>');
+    await injectXmjax($, xmjaxPath);
+    const script = $('div.preamble script[type="math/tex"]');
+    assert.equal(script.length, 1);
+    assert.ok(script.html().includes('\\newcommand'));
+  });
+
+  it('does nothing when the file is absent', async () => {
+    const $ = load('<html><body><div class="preamble"></div></body></html>');
+    await assert.doesNotReject(() => injectXmjax($, path.join(dir, 'missing.xmjax')));
+    assert.equal($('div.preamble script').length, 0);
+  });
+
+  it('does nothing when no commands survive filtering', async () => {
+    const xmjaxPath = path.join(dir, 'empty.xmjax');
+    await writeFile(xmjaxPath, '\\renewcommand {\\foo}{}\n');
+    const $ = load('<html><body><div class="preamble"></div></body></html>');
+    await injectXmjax($, xmjaxPath);
+    assert.equal($('div.preamble script').length, 0);
+  });
+});
+
+describe('injectXmcss', () => {
+  let dir;
+  before(async () => {
+    dir = await mkdtemp(path.join(os.tmpdir(), 'tex4npm-xmcss-'));
+  });
+  after(() => rm(dir, { recursive: true, force: true }));
+
+  it('appends a text/css style into div.preamble', async () => {
+    const xmcssPath = path.join(dir, 'sample.xmcss');
+    await writeFile(xmcssPath, '#minipage0{width:50%;}');
+    const $ = load('<html><body><div class="preamble"></div></body></html>');
+    await injectXmcss($, xmcssPath);
+    const style = $('div.preamble style[type="text/css"]');
+    assert.equal(style.length, 1);
+    assert.ok(style.html().includes('50%'));
+  });
+
+  it('unescapes \\% to %', async () => {
+    const xmcssPath = path.join(dir, 'escape.xmcss');
+    await writeFile(xmcssPath, 'width:50\\%;');
+    const $ = load('<html><body><div class="preamble"></div></body></html>');
+    await injectXmcss($, xmcssPath);
+    assert.ok($('div.preamble style').html().includes('50%'));
+    assert.ok(!$('div.preamble style').html().includes('\\%'));
+  });
+
+  it('does nothing when the file is absent', async () => {
+    const $ = load('<html><body><div class="preamble"></div></body></html>');
+    await assert.doesNotReject(() => injectXmcss($, path.join(dir, 'missing.xmcss')));
+    assert.equal($('div.preamble style').length, 0);
+  });
+
+  it('does nothing when the file is empty', async () => {
+    const xmcssPath = path.join(dir, 'empty.xmcss');
+    await writeFile(xmcssPath, '');
+    const $ = load('<html><body><div class="preamble"></div></body></html>');
+    await injectXmcss($, xmcssPath);
+    assert.equal($('div.preamble style').length, 0);
   });
 });
 

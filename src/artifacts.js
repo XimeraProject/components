@@ -4,7 +4,7 @@ import path from 'path';
 const TEMP_EXTENSIONS = new Set([
   '.aux', '.4ct', '.4tc', '.oc', '.md5', '.dpth', '.out', '.jax',
   '.idv', '.lg', '.tmp', '.xref', '.log', '.auxlock', '.dvi', '.pdf',
-  '.scmd', '.sout', '.fls',
+  '.scmd', '.sout', '.fls', '.xmjax', '.xmcss',
 ]);
 
 // Parse a .fls file produced by latex -recorder.

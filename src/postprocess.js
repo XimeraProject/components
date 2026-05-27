@@ -5,11 +5,13 @@ import { hashFile } from './dirty.js';
 
 // Run all post-processing steps on an HTML file already copied to outDir.
 // Modifies the file in place.
-export async function postprocess(htmlPath, flsInputs, projectRoot, outDir) {
+export async function postprocess(htmlPath, flsInputs, projectRoot, outDir, { xmjaxPath, xmcssPath } = {}) {
   const $ = load(await readFile(htmlPath, 'utf8'));
 
   removeEmptyParas($);
   await injectDependencyMeta($, flsInputs, projectRoot);
+  if (xmjaxPath) await injectXmjax($, xmjaxPath);
+  if (xmcssPath) await injectXmcss($, xmcssPath);
 
   if (isXourse($)) {
     removeSpuriousAnchors($);
@@ -54,6 +56,54 @@ export function removeSpuriousAnchors($) {
       $(el).replaceWith($(el).contents());
     }
   });
+}
+
+// Read the .xmjax file produced by ximera.cls and inject filtered \newcommand
+// definitions as <script type="math/tex"> inside div.preamble so MathJax can
+// render custom commands in the browser.
+export async function injectXmjax($, xmjaxPath) {
+  let raw;
+  try {
+    raw = await readFile(xmjaxPath, 'utf8');
+  } catch {
+    return;
+  }
+  const filtered = filterXmjaxCommands(raw);
+  if (!filtered.trim()) return;
+  $('div.preamble').prepend(`<script type="math/tex">\n${filtered}\n</script>`);
+}
+
+// Keep only \newcommand, \DeclareMathOperator, and \newenvironment lines that
+// don't contain sequences known to cause MathJax errors, then normalise ##N→#N.
+export function filterXmjaxCommands(raw) {
+  const lines = raw.split('\n')
+    .filter(l => !/[:*@]/.test(l))
+    .filter(l => !l.includes('\\_'))
+    .filter(l => !l.includes('\\TU'))
+    .filter(l => !l.includes('\\T1'))
+    .filter(l => !l.includes('\\?'))
+    .filter(l => !l.includes('\\label'))
+    .filter(l =>
+      l.startsWith('\\newcommand {') ||
+      l.startsWith('\\DeclareMathOperator') ||
+      l.startsWith('\\newenvironment')
+    );
+  return lines.join('\n').replace(/##(\d)/g, '#$1');
+}
+
+// Read the .xmcss file produced by \xmCSS{} calls in ximera.cfg and inject it
+// as <style type="text/css"> inside div.preamble. Used for minipage sizing and
+// other layout rules that tex4ht can't express inline.
+export async function injectXmcss($, xmcssPath) {
+  let raw;
+  try {
+    raw = await readFile(xmcssPath, 'utf8');
+  } catch {
+    return;
+  }
+  if (!raw.trim()) return;
+  const css = raw.replace(/\\%/g, '%');
+  $('div.preamble').append(`<style type="text/css">\n${css}\n</style>`);
 }
 
 // For each <a class="activity" href="something.tex"> in a xourse file:

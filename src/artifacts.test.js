@@ -83,6 +83,17 @@ describe('partitionOutputs', () => {
     const { artifacts } = partitionOutputs(['/p/a.html', '/p/b.svg', '/p/c.css']);
     assert.equal(artifacts.length, 3);
   });
+
+  it('treats .xmjax and .xmcss as temps, not artifacts', () => {
+    const { temps, artifacts } = partitionOutputs([
+      '/project/stem.xmjax',
+      '/project/stem.xmcss',
+      '/project/stem.html',
+    ]);
+    assert.ok(temps.includes('/project/stem.xmjax'));
+    assert.ok(temps.includes('/project/stem.xmcss'));
+    assert.ok(artifacts.includes('/project/stem.html'));
+  });
 });
 
 describe('parseLg', () => {

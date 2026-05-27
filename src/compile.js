@@ -48,7 +48,9 @@ export async function compile(texPath, config, { run = execa } = {}) {
   // Only latex/pdflatex need the augmented TEXINPUTS to find staged .sty files.
   // tex4ht and t4ht use their own search paths and must not get a modified env.
   const latexEnv = { ...process.env, TEXINPUTS: makeTexInputs(config.tex4npmTexmf) };
-  const latexOpts = { cwd: dir, env: latexEnv };
+  // latex exits 1 on recoverable warnings under -interaction=nonstopmode; reject:false
+  // lets us continue. If no .dvi is produced, tex4ht will fail with a real error.
+  const latexOpts = { cwd: dir, env: latexEnv, reject: false };
   const tex4htOpts = { cwd: dir };
 
   const pdflatexArg =

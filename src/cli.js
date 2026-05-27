@@ -45,7 +45,10 @@ async function compileFile(texPath, config, queue) {
 
   const htmlOut = toOutPath(texPath, config.root, config.outDir);
   if (existsSync(htmlOut)) {
-    await postprocess(htmlOut, inputs, config.root, config.outDir);
+    await postprocess(htmlOut, inputs, config.root, config.outDir, {
+      xmjaxPath: path.join(dir, `${stem}.xmjax`),
+      xmcssPath: path.join(dir, `${stem}.xmcss`),
+    });
   }
 
   await deleteTemps([...temps, ...tex4htTemps]);

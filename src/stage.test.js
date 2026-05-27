@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, readFile, rm, lstat } from 'fs/promises';
 import os from 'os';
 import path from 'path';
-import { findXimeraPackages, populateTexmf, generateBundleEntry, stage } from './stage.js';
+import { findLatexPackages, populateTexmf, generateBundleEntry, stage } from './stage.js';
 
 // Build a fake node_modules layout in a temp directory.
 async function makeRoot(packages) {
@@ -21,33 +21,33 @@ async function makeRoot(packages) {
   return root;
 }
 
-describe('findXimeraPackages', () => {
+describe('findLatexPackages', () => {
   let root;
   before(async () => {
     root = await makeRoot([
-      ['ximera-foo', { ximera: { sty: ['foo.sty'], css: ['dist/foo.css'] } },
+      ['ximera-foo', { latex: { sty: ['foo.sty'], css: ['dist/foo.css'] } },
         { 'foo.sty': '\\ProvidesPackage{foo}', 'dist/foo.css': '.foo{}' }],
-      ['plain-pkg', { description: 'no ximera field' }],
-      ['@org/ximera-bar', { ximera: { sty: ['bar.sty'], css: [] } },
+      ['plain-pkg', { description: 'no latex field' }],
+      ['@org/ximera-bar', { latex: { sty: ['bar.sty'], css: [] } },
         { 'bar.sty': '\\ProvidesPackage{bar}' }],
     ]);
   });
   after(() => rm(root, { recursive: true, force: true }));
 
-  it('returns packages with a ximera field', async () => {
-    const pkgs = await findXimeraPackages(root);
+  it('returns packages with a latex field', async () => {
+    const pkgs = await findLatexPackages(root);
     assert.equal(pkgs.length, 2);
     assert.ok(pkgs.some(p => p.name === 'ximera-foo'));
     assert.ok(pkgs.some(p => p.name === '@org/ximera-bar'));
   });
 
-  it('skips packages without a ximera field', async () => {
-    const pkgs = await findXimeraPackages(root);
+  it('skips packages without a latex field', async () => {
+    const pkgs = await findLatexPackages(root);
     assert.ok(!pkgs.some(p => p.name === 'plain-pkg'));
   });
 
   it('exposes sty and css arrays', async () => {
-    const pkgs = await findXimeraPackages(root);
+    const pkgs = await findLatexPackages(root);
     const foo = pkgs.find(p => p.name === 'ximera-foo');
     assert.deepEqual(foo.sty, ['foo.sty']);
     assert.deepEqual(foo.css, ['dist/foo.css']);
@@ -58,14 +58,14 @@ describe('populateTexmf', () => {
   let root, tex4npmTexmf;
   before(async () => {
     root = await makeRoot([
-      ['ximera-foo', { ximera: { sty: ['foo.sty'] } }, { 'foo.sty': '' }],
+      ['ximera-foo', { latex: { sty: ['foo.sty'] } }, { 'foo.sty': '' }],
     ]);
     tex4npmTexmf = path.join(root, '.tex4npm', 'texmf');
   });
   after(() => rm(root, { recursive: true, force: true }));
 
   it('creates a symlink (or file) in the latex dir for each .sty', async () => {
-    const pkgs = await findXimeraPackages(root);
+    const pkgs = await findLatexPackages(root);
     await populateTexmf(tex4npmTexmf, pkgs);
     const dest = path.join(tex4npmTexmf, 'tex', 'latex', 'foo.sty');
     const stat = await lstat(dest);
@@ -73,7 +73,7 @@ describe('populateTexmf', () => {
   });
 
   it('wipes and rebuilds the latex dir on repeated calls', async () => {
-    const pkgs = await findXimeraPackages(root);
+    const pkgs = await findLatexPackages(root);
     await populateTexmf(tex4npmTexmf, pkgs);
     await populateTexmf(tex4npmTexmf, pkgs); // second call must not throw
     const dest = path.join(tex4npmTexmf, 'tex', 'latex', 'foo.sty');
@@ -83,11 +83,11 @@ describe('populateTexmf', () => {
 
   it('throws on .sty filename collision between two packages', async () => {
     const collRoot = await makeRoot([
-      ['ximera-a', { ximera: { sty: ['shared.sty'] } }, { 'shared.sty': '' }],
-      ['ximera-b', { ximera: { sty: ['shared.sty'] } }, { 'shared.sty': '' }],
+      ['ximera-a', { latex: { sty: ['shared.sty'] } }, { 'shared.sty': '' }],
+      ['ximera-b', { latex: { sty: ['shared.sty'] } }, { 'shared.sty': '' }],
     ]);
     try {
-      const pkgs = await findXimeraPackages(collRoot);
+      const pkgs = await findLatexPackages(collRoot);
       await assert.rejects(
         () => populateTexmf(path.join(collRoot, '.tex4npm', 'texmf'), pkgs),
         /collision/
@@ -130,7 +130,7 @@ describe('stage (integration)', () => {
   let root;
   before(async () => {
     root = await makeRoot([
-      ['ximera-foo', { ximera: { sty: ['foo.sty'], css: ['dist/foo.css'] } },
+      ['ximera-foo', { latex: { sty: ['foo.sty'], css: ['dist/foo.css'] } },
         { 'foo.sty': '', 'dist/foo.css': '' }],
     ]);
   });
@@ -138,6 +138,7 @@ describe('stage (integration)', () => {
 
   it('runs all three stages and returns the package list', async () => {
     const config = {
+      configDir: root,
       root,
       tex4npmDir: path.join(root, '.tex4npm'),
       tex4npmTexmf: path.join(root, '.tex4npm', 'texmf'),

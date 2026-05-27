@@ -25,6 +25,7 @@ export function resolveConfig(userConfig = {}, configDir = process.cwd()) {
   const tex4npmDir = path.join(root, '.tex4npm');
 
   return {
+    configDir,  // npm package root — where node_modules and tex4npm.config.js live
     root,
     outDir,
     tex4npmDir,

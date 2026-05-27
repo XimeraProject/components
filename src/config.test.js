@@ -34,6 +34,12 @@ describe('resolveConfig', () => {
     assert.equal(c.tex4npmTexmf, '/project/.tex4npm/texmf');
   });
 
+  it('exposes configDir as the npm package root', () => {
+    const c = resolveConfig({ root: 'src' }, '/project');
+    assert.equal(c.configDir, '/project');
+    assert.equal(c.root, '/project/src');
+  });
+
   it('passes through workers, passes, clean, exclude', () => {
     const c = resolveConfig({
       workers: 8, passes: 3, clean: false, exclude: ['drafts/**'],

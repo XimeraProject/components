@@ -2,17 +2,17 @@ import { readFile, writeFile, mkdir, rm, symlink, link, copyFile } from 'fs/prom
 import glob from 'fast-glob';
 import path from 'path';
 
-// Run all three pre-build stages. Returns the list of discovered ximera packages.
+// Run all three pre-build stages. Returns the list of discovered latex packages.
 export async function stage(config) {
-  const packages = await findXimeraPackages(config.root);
+  const packages = await findLatexPackages(config.configDir);
   await populateTexmf(config.tex4npmTexmf, packages);
   await generateBundleEntry(config.tex4npmDir, packages);
   return packages;
 }
 
-// Stage 1: scan node_modules for packages with a "ximera" field.
+// Stage 1: scan node_modules for packages with a "latex" field.
 // Only checks top-level and scoped packages, not deeply nested ones.
-export async function findXimeraPackages(root) {
+export async function findLatexPackages(root) {
   const manifests = await glob(
     ['node_modules/*/package.json', 'node_modules/@*/*/package.json'],
     { cwd: root, absolute: true }
@@ -26,12 +26,12 @@ export async function findXimeraPackages(root) {
     } catch {
       continue;
     }
-    if (!pkg.ximera) continue;
+    if (!pkg.latex) continue;
     packages.push({
       name: pkg.name,
       dir: path.dirname(manifestPath),
-      sty: pkg.ximera.sty ?? [],
-      css: pkg.ximera.css ?? [],
+      sty: pkg.latex.sty ?? [],
+      css: pkg.latex.css ?? [],
     });
   }
 

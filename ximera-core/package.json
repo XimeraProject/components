@@ -2,12 +2,21 @@
   "name": "ximera-core",
   "version": "0.1.0",
   "type": "module",
-  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./kernel": "./kernel.js",
+    "./conformance": "./conformance.js"
+  },
   "latex": {
     "css": ["ximera-core.css"]
   },
+  "scripts": {
+    "test": "node --test 'test/**/*.test.js'"
+  },
   "dependencies": {
-    "@modulus-learning/agent": "*",
-    "math-expressions": "*"
+    "@modulus-learning/agent": "*"
+  },
+  "devDependencies": {
+    "happy-dom": "^15.0.0"
   }
 }

@@ -47,13 +47,28 @@ export function registerRender(
 
 export function dispatch(msg: Message): void;
 
+// App-level (not component-level): the browser entry calls this once to
+// wire the kernel to a Modulus agent. Components never call boot.
+export function boot(
+  agent: ModulusAgent,
+  options?: { confirmReset?: (msg: string) => boolean; mountResetControl?: boolean }
+): Promise<void>;
+
 export type Model = { [domId: string]: Entry };
 export type Entry = Record<string, unknown>;           // JSON-serializable
 export type Message = { type: string; [key: string]: unknown };
 export type Dispatch = (msg: Message) => void;
 ```
 
-No other symbols are exported. Components MUST NOT import from anywhere except the package's public entry point (enforced by conformance: §14).
+**Two entry points.**
+
+| Import | When | What it does |
+|---|---|---|
+| `ximera-core` | Production bundle (tex4npm-emitted entry) | Auto-boots: imports the real `@modulus-learning/agent`, constructs it, calls `boot()` at module load |
+| `ximera-core/kernel` | Test suites, custom app entries | Same API, no side effects — you call `boot(agent)` explicitly with a mock or a hand-configured agent |
+| `ximera-core/conformance` | Test suites only | Test helpers: `createMockAgent`, `mountFixture`, `resetKernel`, `inspect`, `runConformance`. Reaches into kernel internals; not for production code. |
+
+Components MUST NOT import from anywhere except `ximera-core` or `ximera-core/kernel` (enforced by conformance: §14).
 
 ---
 
@@ -213,7 +228,7 @@ registerReducer('ximera-word-choice:SELECT', (model, msg) => {
 1. `type` MUST be namespaced: `"<package>:MESSAGE"`. The kernel emits a dev-mode warning for unnamespaced or colliding types.
 2. Reducer MUST be pure: same input → same output, no I/O, no timers, no `dispatch` calls, no DOM writes.
 3. Reducer MAY read the DOM for authored configuration (e.g. which `.choice` has class `correct`). It MUST NOT read learner state from the DOM — that comes from `model` (§10 guardrail 1).
-4. Reducer MUST return a new object for changed entries. Unchanged entries MAY be the same reference.
+4. Reducer MUST return a new object for changed entries. Unchanged entries MAY be the same reference. **A reducer that determines its message is a no-op SHOULD return the input model unchanged** (`return model;`) — dispatch detects reference equality and skips render + persist, so persistence isn't hammered on redundant events (e.g. clicking a hint that's already revealed).
 5. Reducer MUST be forward-tolerant on restore: if the persisted entry has unknown keys, keep them; if expected keys are missing, default them; never rename a persisted key without a shim (D6).
 6. Exactly one reducer per `type`. Duplicate registration is a startup error.
 
@@ -252,6 +267,7 @@ registerRender('.word-choice', (el, entry, model) => {
    This prevents caret jumping while the learner types (kernel does the same for its own form syncs).
 5. Kernel runs the built-in projection first (problem-environment `data-state`, feedback `data-state`), then component renders in registration order for elements matching each selector.
 6. Kernel skips render for an entry when the `oldModel[id] === newModel[id]` (reference equality). Reducers get this "for free" by returning the same reference for unchanged entries.
+7. Kernel iterates **DOM elements matching a registered selector**, not model keys. Elements with no model entry are still rendered — the render function receives `entry = {}` and projects the empty state. This is what makes fresh-mount ("no dispatch yet") and reset-then-restore renders correct without special-casing.
 
 ---
 
@@ -284,14 +300,16 @@ Runs on `PAGE_STATE_RESTORED` and `AGENT_READY_OFFLINE`. For every `.problem-env
 
 ### `propagateCorrectness(model, problemId)` (kernel-internal)
 
-Called by the kernel's completion diff (§7). Given a problem-environment id:
+Called by the kernel's completion diff (§7). Given a problem-environment id, one of three cases applies:
 
-1. Compute `answerables = getDirectAnswerables(problemEl)`. If empty, return.
-2. If **every** answerable has `entry.complete === true`, mark the problem `complete: true`.
-3. When the problem transitions to `complete: true`:
-   - Any direct-child `.problem-environment[data-blocking]` becomes `available: true`. This is the "uncovering" behavior.
-   - Any direct-child `.feedback[data-feedback="correct"]` becomes visible (§12 or `ximera-feedback` spec).
-   - Recurse to the parent problem-environment.
+1. **Answerable-driven completion.** If the environment has direct answerables, it completes iff every direct answerable has `entry.complete === true`.
+2. **Container completion.** If the environment has no direct answerables but has direct-child `.problem-environment[id]`s (a container of nested problems), it completes iff every direct-child problem is complete. This is what makes nested-only structures aggregate: `outer > middle > inner > answerable` propagates all the way up even though `outer` and `middle` have no answerables of their own.
+3. **Inert.** If the environment has neither direct answerables nor direct-child problems, it cannot complete via this mechanism. Nothing happens.
+
+When the environment transitions to `complete: true`:
+- Any direct-child `.problem-environment[data-blocking]` becomes `available: true` and `experienced: true`. This is the "uncovering" behavior.
+- Any direct-child `.feedback[data-feedback="attempt"|"correct"]` becomes visible (§12 or `ximera-feedback` spec).
+- Recurse to the parent problem-environment.
 
 Components never observe this recursion; they see it only as their own state, or as changes to problem-environment `data-state` values.
 
@@ -357,7 +375,14 @@ The compiled HTML has content DOM. Components add *control chrome* — Check but
 
 ## 14. Conformance
 
-Every `ximera-*` package in the v1 roster MUST pass the conformance kit before its Phase-of-introduction is called done. The kit ships from `ximera-core` in Phase 1 and grows through Phases 2–4.
+Every `ximera-*` package in the v1 roster MUST pass the conformance kit before its Phase-of-introduction is called done. The kit ships from `ximera-core/conformance` in Phase 1 and grows through Phases 2–4.
+
+Public helpers (import from `ximera-core/conformance`):
+- `createMockAgent({ initialPageState?, autoReady? })` — test double for `@modulus-learning/agent`. Records `setPageState` and `setProgress` calls, exposes `triggerPageStateChanged` for the server-push path.
+- `resetKernel()` — clears every kernel registry (mounts, reducers, render plugins) and the boot singleton. Call before each test that expects a clean slate.
+- `mountFixture(html, options?)` — installs `html` as the document body, resets the boot singleton, boots with a mock agent. Returns `{ agent, dispatch }`. Component `setup()` calls MUST run between `resetKernel()` and `mountFixture()`.
+- `inspect()` — returns `{ model, agent }` — read-only view of kernel state for assertions.
+- `runConformance(testFn, spec)` — the six §14.1–§14.6 tests packaged as one call. Suits full-end-to-end component tests; individual specs may prefer hand-written tests using the primitives above.
 
 ### 14.1 Mount
 

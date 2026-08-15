@@ -1,235 +1,274 @@
-import { getElementState, setElementState } from './model.js';
-import Expression from 'math-expressions';
+import { getEntry, setEntry, initialModel, modelFromPageState } from './model.js';
+import { getAnswerableSelector } from './mounts.js';
 
-export function update(model, msg) {
+// The three core-owned message types (CONTRACT §4). Component reducers cannot
+// register for these; the kernel handles them directly.
+const CORE_MESSAGES = new Set([
+  'PAGE_STATE_RESTORED',
+  'AGENT_READY_OFFLINE',
+  'RESET_WORK',
+]);
+
+// ─── Reducer registry (D1) ─────────────────────────────────────────────────
+
+const reducers = new Map(); // type -> reducer
+
+export function registerReducer(type, reducer) {
+  if (typeof type !== 'string' || !type) {
+    throw new Error('registerReducer: type must be a non-empty string');
+  }
+  if (typeof reducer !== 'function') {
+    throw new Error('registerReducer: reducer must be a function');
+  }
+  if (CORE_MESSAGES.has(type)) {
+    throw new Error(`registerReducer: "${type}" is a core-owned message type`);
+  }
+  if (reducers.has(type)) {
+    throw new Error(`registerReducer: reducer for "${type}" already registered`);
+  }
+  if (!type.includes(':') && isDev()) {
+    console.warn(
+      `ximera-core: reducer type "${type}" is not namespaced ` +
+      `(expected "<package>:MESSAGE")`
+    );
+  }
+  reducers.set(type, reducer);
+}
+
+// Test-only.
+export function _resetReducers() {
+  reducers.clear();
+}
+
+// ─── Core reducers ─────────────────────────────────────────────────────────
+
+function coreReduce(model, msg) {
   switch (msg.type) {
-
-    case 'PAGE_STATE_RESTORED':
-      return initializeAvailability(msg.pageState);
-
+    case 'PAGE_STATE_RESTORED': {
+      const merged = { ...model, ...modelFromPageState(msg.pageState) };
+      return initializeAvailability(merged);
+    }
     case 'AGENT_READY_OFFLINE':
-      return initializeAvailability(model);
-
-    case 'ANSWER_INPUT':
-      return setElementState(model, msg.id, { response: msg.value });
-
-    case 'ANSWER_CHECK': {
-      const state = getElementState(model, msg.id);
-      const correct = checkAnswer(state.response ?? '', msg.correctText);
-      let next = setElementState(model, msg.id, {
-        attempt: state.response ?? '',
-        correct,
-        complete: correct,
-      });
-      const problemId = findParentProblemId(msg.id);
-      if (problemId) next = propagateCorrectness(next, problemId);
-      else if (!correct) next = markAttemptFeedback(next, problemId);
-      return next;
+      return initializeAvailability(initialModel());
+    case 'RESET_WORK':
+      return initializeAvailability(initialModel());
+    default: {
+      const r = reducers.get(msg.type);
+      if (!r) {
+        if (isDev()) {
+          console.warn(`ximera-core: no reducer for message type "${msg.type}"`);
+        }
+        return model;
+      }
+      return r(model, msg);
     }
-
-    case 'CHOICE_SELECT':
-      return setElementState(model, msg.problemId, { chosen: msg.choiceId });
-
-    case 'MULTIPLE_CHOICE_CHECK': {
-      const state = getElementState(model, msg.problemId);
-      if (!state.chosen) return model;
-      const choiceEl = document.getElementById(state.chosen);
-      const correct = choiceEl?.classList.contains('correct') ?? false;
-      const wrong = { ...(state.wrong ?? {}) };
-      if (!correct) wrong[state.chosen] = true;
-      let next = setElementState(model, msg.problemId, {
-        checked: state.chosen,
-        correct,
-        complete: correct,
-        wrong,
-      });
-      if (correct) next = propagateCorrectness(next, msg.problemId);
-      else next = markAttemptFeedback(next, msg.problemId);
-      return next;
-    }
-
-    case 'SELECT_ALL_TOGGLE': {
-      const state = getElementState(model, msg.problemId);
-      const chosen = state.chosen ?? [];
-      const next = chosen.includes(msg.choiceId)
-        ? chosen.filter(id => id !== msg.choiceId)
-        : [...chosen, msg.choiceId];
-      return setElementState(model, msg.problemId, { chosen: next });
-    }
-
-    case 'SELECT_ALL_CHECK': {
-      const state = getElementState(model, msg.problemId);
-      if (!state.chosen?.length) return model;
-      const correct = checkSelectAll(msg.problemId, state.chosen);
-      let next = setElementState(model, msg.problemId, {
-        checked: [...state.chosen],
-        correct,
-        complete: correct,
-      });
-      if (correct) next = propagateCorrectness(next, msg.problemId);
-      else next = markAttemptFeedback(next, msg.problemId);
-      return next;
-    }
-
-    case 'WORD_CHOICE_SELECT': {
-      // Immediate feedback: selecting a word IS the answer (no separate check step).
-      const choiceEl = document.getElementById(msg.choiceId);
-      const correct = choiceEl?.classList.contains('correct') ?? false;
-      let next = setElementState(model, msg.problemId, {
-        chosen: msg.choiceId,
-        checked: msg.choiceId,
-        correct,
-        complete: correct,
-      });
-      if (correct) next = propagateCorrectness(next, msg.problemId);
-      else next = markAttemptFeedback(next, msg.problemId);
-      return next;
-    }
-
-    case 'FREE_RESPONSE_INPUT':
-      return setElementState(model, msg.id, { response: msg.value });
-
-    case 'FREE_RESPONSE_SUBMIT': {
-      // Any submission counts as complete; unblocks subsequent problems.
-      let next = setElementState(model, msg.id, { submitted: true, complete: true });
-      const problemId = findParentProblemId(msg.id);
-      if (problemId) next = propagateCorrectness(next, problemId);
-      return next;
-    }
-
-    case 'HINT_REVEAL':
-      return setElementState(model, msg.id, { revealed: true });
-
-    default:
-      return model;
   }
 }
 
-// ─── Initialization ────────────────────────────────────────────────────────
+// ─── initializeAvailability ────────────────────────────────────────────────
 
-function initializeAvailability(model) {
-  let next = { ...model };
-
-  document.querySelectorAll('.problem-environment').forEach(el => {
-    const id = el.id;
-    if (!id) return;
-    const parentProblem = el.parentElement?.closest('.problem-environment');
-    const isBlocking = el.hasAttribute('data-blocking');
-    // Top-level problems start available; nested blocking problems start unavailable
-    if (!parentProblem || !isBlocking) {
-      next = setElementState(next, id, { available: true, complete: false, ...getElementState(next, id) });
-    } else {
-      const existing = getElementState(next, id);
-      if (existing.available === undefined) {
-        next = setElementState(next, id, { available: false, complete: false });
-      }
-    }
-  });
-
-  return next;
-}
-
-// ─── Correctness propagation ───────────────────────────────────────────────
-
-function propagateCorrectness(model, problemId) {
-  const problemEl = document.getElementById(problemId);
-  if (!problemEl) return model;
-
-  const answerables = getDirectAnswerables(problemEl);
-  // All answerables must have complete:true. Free-response uses submitted→complete;
-  // graded types use correct→complete. Both set complete:true in their handlers.
-  const allComplete = answerables.every(id => getElementState(model, id).complete === true);
+// Walk .problem-environment[id] in the DOM and stamp the environment triple
+// { available, complete, experienced } into the model.
+//
+// Rules (CONTRACT §9):
+//   - top-level (no ancestor .problem-environment) → available: true
+//   - non-blocking → available: true
+//   - nested + blocking → available: false UNLESS the entry already has
+//     available: true (persisted from a prior completion)
+//
+// Blocking is either the author-set data-blocking attribute OR computed
+// at runtime from the answerable-selector union (D3): if the environment
+// directly contains an answerable, it blocks. Runtime-computed blocking
+// stamps the data-blocking attribute for CSS to react to.
+//
+// Newly-available environments are marked experienced. All existing entry
+// keys are preserved (forward-tolerant per D6).
+export function initializeAvailability(model) {
+  if (typeof document === 'undefined') return model;
 
   let next = model;
+  const answerableSelector = getAnswerableSelector();
 
-  if (allComplete && answerables.length > 0) {
-    next = setElementState(next, problemId, { complete: true });
+  for (const el of document.querySelectorAll('.problem-environment')) {
+    if (!el.id) continue;
 
-    // Reveal correct and attempt feedbacks
-    problemEl.querySelectorAll('.feedback').forEach(fb => {
-      const type = fb.dataset.feedback;
-      if (fb.id && fb.closest('.problem-environment') === problemEl &&
-          (type === 'correct' || type === 'attempt' || !type)) {
-        next = setElementState(next, fb.id, { visible: true });
-      }
-    });
+    const isTopLevel = !el.parentElement?.closest('.problem-environment');
+    let isBlocking = el.hasAttribute('data-blocking');
+    if (!isBlocking && answerableSelector && hasDirectAnswerable(el, answerableSelector)) {
+      isBlocking = true;
+      el.setAttribute('data-blocking', '');
+    }
 
-    // Unlock direct child blocking problems
-    problemEl.querySelectorAll('.problem-environment[data-blocking]').forEach(child => {
-      if (child.parentElement?.closest('.problem-environment') === problemEl && child.id) {
-        next = setElementState(next, child.id, { available: true });
-      }
-    });
+    const existing = getEntry(next, el.id);
+    const shouldBeAvailable = isTopLevel || !isBlocking || existing.available === true;
 
-    // Propagate up to parent
-    const parentProblem = problemEl.parentElement?.closest('.problem-environment');
-    if (parentProblem?.id) next = propagateCorrectness(next, parentProblem.id);
+    const merged = {
+      complete: false,
+      experienced: false,
+      ...existing,
+      available: shouldBeAvailable,
+    };
+    if (merged.available && !merged.experienced) merged.experienced = true;
+
+    next = { ...next, [el.id]: merged };
   }
 
   return next;
 }
 
-function markAttemptFeedback(model, problemId) {
-  if (!problemId) return model;
+function hasDirectAnswerable(el, answerableSelector) {
+  for (const m of el.querySelectorAll(answerableSelector)) {
+    if (m.closest('.problem-environment') === el) return true;
+  }
+  return false;
+}
+
+// ─── propagateCorrectness ──────────────────────────────────────────────────
+
+// Given a problem-environment id: if every direct answerable child has
+// complete: true, mark the environment complete, uncover direct-child
+// blockers, mark direct-child correct/attempt feedback visible, and
+// recurse to the parent problem-environment.
+export function propagateCorrectness(model, problemId) {
+  if (typeof document === 'undefined') return model;
   const problemEl = document.getElementById(problemId);
   if (!problemEl) return model;
+
+  const answerableSelector = getAnswerableSelector();
+  const answerables = answerableSelector
+    ? getDirectAnswerableIds(problemEl, answerableSelector)
+    : [];
+  const directChildProblems = getDirectChildProblemIds(problemEl);
+
+  // Completion rules:
+  //   - If this env has direct answerables: complete iff every one is complete.
+  //   - Else if it has only nested problem-envs (a container): complete iff
+  //     every direct-child problem is complete.
+  //   - Else: nothing here can drive completion — bail.
+  let allComplete;
+  if (answerables.length > 0) {
+    allComplete = answerables.every(id => getEntry(model, id).complete === true);
+  } else if (directChildProblems.length > 0) {
+    allComplete = directChildProblems.every(id => getEntry(model, id).complete === true);
+  } else {
+    return model;
+  }
+  if (!allComplete) return model;
+
   let next = model;
-  problemEl.querySelectorAll('.feedback[data-feedback="attempt"]').forEach(fb => {
-    if (fb.id && fb.closest('.problem-environment') === problemEl) {
-      next = setElementState(next, fb.id, { visible: true });
+  if (!getEntry(next, problemId).complete) {
+    next = setEntry(next, problemId, { complete: true });
+  }
+
+  // Reveal direct-child feedback (attempt and correct flavors). Feedback
+  // for wrong-answer-only cases lives in markAttemptFeedback below.
+  for (const fb of problemEl.querySelectorAll('.feedback[id]')) {
+    if (fb.closest('.problem-environment') !== problemEl) continue;
+    const type = fb.dataset.feedback;
+    if (type === 'correct' || type === 'attempt' || !type) {
+      if (!getEntry(next, fb.id).visible) {
+        next = setEntry(next, fb.id, { visible: true });
+      }
     }
-  });
+  }
+
+  // Uncover direct-child blocking sub-problems.
+  for (const child of problemEl.querySelectorAll('.problem-environment[data-blocking]')) {
+    if (child.parentElement?.closest('.problem-environment') !== problemEl) continue;
+    if (!child.id) continue;
+    const childEntry = getEntry(next, child.id);
+    if (!childEntry.available) {
+      next = setEntry(next, child.id, { available: true, experienced: true });
+    }
+  }
+
+  // Recurse to parent problem-environment.
+  const parent = problemEl.parentElement?.closest('.problem-environment');
+  if (parent?.id) next = propagateCorrectness(next, parent.id);
+
   return next;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────
+// Reveal .feedback[data-feedback="attempt"] for an incorrect submission.
+// Called by runReduce when it observes an answerable entry gain a `checked`
+// key without becoming complete.
+export function markAttemptFeedback(model, problemId) {
+  if (typeof document === 'undefined') return model;
+  const problemEl = document.getElementById(problemId);
+  if (!problemEl) return model;
 
-// Returns IDs of direct answerable children.
-// "Direct" means no intervening .problem-environment between them and problemEl.
-function getDirectAnswerables(problemEl) {
+  let next = model;
+  for (const fb of problemEl.querySelectorAll('.feedback[data-feedback="attempt"][id]')) {
+    if (fb.closest('.problem-environment') !== problemEl) continue;
+    if (!getEntry(next, fb.id).visible) {
+      next = setEntry(next, fb.id, { visible: true });
+    }
+  }
+  return next;
+}
+
+function getDirectAnswerableIds(problemEl, answerableSelector) {
   const ids = [];
-  const walk = (el) => {
-    for (const child of el.children) {
-      if (child.classList.contains('problem-environment')) continue;
-      if (
-        (child.classList.contains('answer') && child.classList.contains('respondable')) ||
-        child.classList.contains('multiple-choice') ||
-        child.classList.contains('select-all') ||
-        child.classList.contains('word-choice') ||
-        child.classList.contains('free-response')
-      ) {
-        if (child.id) ids.push(child.id);
-      }
-      walk(child);
+  for (const el of problemEl.querySelectorAll(answerableSelector)) {
+    if (el.closest('.problem-environment') === problemEl && el.id) {
+      ids.push(el.id);
     }
-  };
-  walk(problemEl);
+  }
   return ids;
 }
 
-function findParentProblemId(answerId) {
-  const el = document.getElementById(answerId);
-  return el?.closest('.problem-environment')?.id ?? null;
-}
-
-// Use math-expressions for symbolic equality; fall back to case-insensitive string comparison.
-function checkAnswer(response, correctText) {
-  if (!response.trim()) return false;
-  try {
-    return Expression.fromText(response).equals(Expression.fromText(correctText));
-  } catch {
-    return response.trim().toLowerCase() === correctText.trim().toLowerCase();
+function getDirectChildProblemIds(problemEl) {
+  const ids = [];
+  for (const el of problemEl.querySelectorAll('.problem-environment')) {
+    if (el.parentElement?.closest('.problem-environment') === problemEl && el.id) {
+      ids.push(el.id);
+    }
   }
+  return ids;
 }
 
-function checkSelectAll(problemId, chosen) {
-  const el = document.getElementById(problemId);
-  if (!el) return false;
-  const correctIds = [...el.querySelectorAll('.choice.correct')].map(c => c.id);
-  const sortedChosen = [...chosen].sort();
-  const sortedCorrect = [...correctIds].sort();
-  return (
-    sortedChosen.length === sortedCorrect.length &&
-    sortedChosen.every((id, i) => id === sortedCorrect[i])
-  );
+// ─── runReduce: the dispatch loop's reducer step ───────────────────────────
+
+// Calls the appropriate reducer, then does the D1 completion diff: for
+// every answerable entry that transitioned complete: false → true, calls
+// propagateCorrectness. For every answerable entry that gained a
+// `checked` key without becoming complete, reveals attempt feedback.
+export function runReduce(model, msg) {
+  const before = model;
+  const after = coreReduce(model, msg);
+  if (after === before) return after;
+
+  if (typeof document === 'undefined') return after;
+  const answerableSelector = getAnswerableSelector();
+  if (!answerableSelector) return after;
+
+  let result = after;
+  for (const id of Object.keys(after)) {
+    const beforeEntry = before[id] ?? {};
+    const afterEntry = after[id];
+    if (!afterEntry) continue;
+
+    const el = document.getElementById(id);
+    if (!el || !el.matches(answerableSelector)) continue;
+
+    const problemEl = el.closest('.problem-environment');
+    if (!problemEl?.id) continue;
+
+    // Newly complete → propagate.
+    if (beforeEntry.complete !== true && afterEntry.complete === true) {
+      result = propagateCorrectness(result, problemEl.id);
+      continue;
+    }
+    // Newly checked (attempted) without becoming complete → attempt feedback.
+    const wasChecked = beforeEntry.checked !== undefined;
+    const isChecked = afterEntry.checked !== undefined;
+    if (!wasChecked && isChecked && afterEntry.complete !== true) {
+      result = markAttemptFeedback(result, problemEl.id);
+    }
+  }
+  return result;
+}
+
+function isDev() {
+  return typeof process === 'undefined' || process.env?.NODE_ENV !== 'production';
 }

@@ -7,7 +7,9 @@
   "dependencies": {
     "my-button": "*",
     "tex4npm": "*",
-    "ximera-core": "*"
+    "ximera-core": "*",
+    "ximera-hint": "*",
+    "ximera-word-choice": "*"
   },
   "type": "module"
 }

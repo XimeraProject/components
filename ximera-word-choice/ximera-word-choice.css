@@ -1,0 +1,33 @@
+/* ximera-word-choice — inline dropdown embedded in prose. */
+
+.word-choice {
+  display: inline-block;
+  vertical-align: baseline;
+}
+
+select.ximera-word-select {
+  font-size: inherit;
+  font-family: inherit;
+  padding: 1px 4px;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  background: #fafafa;
+  cursor: pointer;
+}
+
+select.ximera-word-select:focus {
+  outline: 2px solid #4a90d9;
+  outline-offset: 1px;
+}
+
+.word-choice[data-state~="correct"] select.ximera-word-select {
+  border-color: #2a7a2a;
+  background: #f0fff0;
+  color: #1a5c1a;
+  cursor: default;
+}
+
+.word-choice[data-state~="attempted"] select.ximera-word-select {
+  border-color: #c00;
+  background: #fff5f5;
+}

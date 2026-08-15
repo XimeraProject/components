@@ -7,12 +7,10 @@
 \begin{document}
 
 \begin{abstract}
-Testing interactives and ff.
+Testing the Phase~2 pilots: \texttt{ximera-hint} and \texttt{ximera-word-choice}, alongside legacy \texttt{\textbackslash answer} and \texttt{\textbackslash button}.
 \end{abstract}
 
 \maketitle
-
-Now I'm using metadata too.
 
 \button{Push!}
 
@@ -23,10 +21,25 @@ Now I'm using metadata too.
     You made a first attempt!
   \end{feedback}
 
-
   \begin{feedback}[correct]
     I have always loved the number 17.
   \end{feedback}
+
+  \begin{hint}
+    It's the smallest prime number that is neither a Fermat prime nor a Mersenne prime.
+  \end{hint}
+
+  \begin{hint}
+    It's the number of syllables in a haiku.
+  \end{hint}
+\end{problem}
+
+\begin{problem}
+  The capital of Ohio is \wordChoice{%
+    \choice{Cleveland}%
+    \choice[correct]{Columbus}%
+    \choice{Cincinnati}%
+  }.
 \end{problem}
 
 \begin{problem}
@@ -35,6 +48,5 @@ Now I'm using metadata too.
   \sqrt{\answer{16}} = 4 = \frac{8}{\answer{2}}.
   \]
 \end{problem}
-
 
 \end{document}

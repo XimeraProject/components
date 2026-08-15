@@ -1,0 +1,15 @@
+{
+  "name": "ximera-integration",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test 'test/**/*.test.js'"
+  },
+  "devDependencies": {
+    "happy-dom": "^15.0.0",
+    "tex4npm": "*",
+    "ximera-core": "*",
+    "ximera-hint": "*",
+    "ximera-word-choice": "*"
+  }
+}

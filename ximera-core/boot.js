@@ -47,29 +47,37 @@ export async function boot(agent, options = {}) {
 
   await new Promise((resolve) => {
     agent.onReady(() => {
+      // Boot sequence: reduce → mount → render → persist.
+      //
+      // Reducing before mounting means the model reflects the initial
+      // state before any mount function reads it. Mounting before
+      // rendering means every attribute the mount adds is in place
+      // before the first render sets its dependent attributes — this
+      // is what makes DOM byte-identical on first-visit and reload
+      // (attribute insertion order is deterministic across paths).
+
       const saved = agent.pageState();
-      if (saved && typeof saved === 'object' && Object.keys(saved).length > 0) {
-        dispatch({ type: 'PAGE_STATE_RESTORED', pageState: saved });
-      } else {
-        dispatch({ type: 'AGENT_READY_OFFLINE' });
-      }
+      const initialMsg =
+        saved && typeof saved === 'object' && Object.keys(saved).length > 0
+          ? { type: 'PAGE_STATE_RESTORED', pageState: saved }
+          : { type: 'AGENT_READY_OFFLINE' };
+      model = runReduce(model, initialMsg);
 
-      // Mount reset control BEFORE component mounts, so the button is
-      // present even in fixtures that lack a mount point of their own.
       if (shouldMountReset) mountResetControl(confirmReset);
-
-      // Run registered mounts. Each mount fn is called once per matching
-      // element on the page.
       if (typeof document !== 'undefined') {
         for (const [selector, { mount }] of getMounts()) {
           document.querySelectorAll(selector).forEach(el => mount(el, dispatch));
         }
       }
 
-      // Initial render pass across every DOM element matching a plugin
-      // selector or a built-in class. Uses null previousModel so nothing
-      // is ref-skipped — first render paints the whole page.
+      // One render pass across every matched element. Null previousModel
+      // means nothing is ref-skipped.
       render(model, null);
+
+      // Persist the initial state so an offline/first-visit page still
+      // reports its baseline progress.
+      agent.setPageState(modelToPageState(model));
+      agent.setProgress(calculateProgress(model));
 
       resolve();
     });

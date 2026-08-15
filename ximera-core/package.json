@@ -5,7 +5,8 @@
   "exports": {
     ".": "./index.js",
     "./kernel": "./kernel.js",
-    "./conformance": "./conformance.js"
+    "./conformance": "./conformance.js",
+    "./*.css": "./*.css"
   },
   "latex": {
     "css": ["ximera-core.css"]

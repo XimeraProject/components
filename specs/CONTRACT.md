@@ -1,6 +1,15 @@
 # CONTRACT.md
 
-**Status:** Phase 0 draft. Frozen at the end of Phase 2 per PLAN.md §5 (contract-freeze gate). Any change to a documented surface after freeze is semver-major.
+**Status:** **Frozen at Phase 2 exit.** Every documented surface below is a semver-major concern from here on — changes require a coordinated release across `ximera-core` and every published component.
+
+**Frozen by:** two pilot packages (`ximera-hint`, `ximera-word-choice`) exercising every API surface, 90 passing tests across kernel + pilots + integration, and a compiled `my-course/dist/sample.html` demonstrating mount, interaction, uncovering, reset, and reload-restore with only the kernel plus the two pilots (PLAN.md §5 Phase 2 exit criteria).
+
+**Phase 2 revisions folded in before freeze:**
+- Added `boot(agent, options?)` to §2, plus the two-entry-point convention (`ximera-core` auto-boots; `ximera-core/kernel` is inert for tests).
+- §7 rule 4: reducers SHOULD return the input model unchanged for no-op messages (idempotence → dispatch skips render + persist).
+- §8 rule 7: render iterates DOM by selector, not by model keys — so fresh-mount and reset-cleared entries both project their empty state.
+- §9: container-completion rule — an environment with only nested problem-envs completes when its direct children do (aggregates through nesting depth).
+- Boot sequence contract (§13-adjacent): reduce → mount → render, in that order, so DOM attribute insertion order is deterministic across first-visit and reload paths.
 
 **Scope:** The contract between `ximera-core` (the kernel) and every `ximera-*` component package. This is what a component author writes against and what the kernel promises in return. Product motivation lives in `ARCHITECTURE.md` and `PLAN.md`; this document is normative.
 
@@ -196,7 +205,7 @@ register('.word-choice', (el, dispatch) => {
 1. `register(selector, mount, opts)` is idempotent per element. Kernel guarantees `mount(el, dispatch)` is called exactly once per matching element per page load.
 2. `selector` MUST be a valid CSS selector matching only the component's own DOM shape (emitted by its `.sty` / `.4ht`).
 3. `opts.answerable: true` adds `selector` to the answerable registry (D2). Kernel's `getDirectAnswerables(problemEl)` then treats matching elements as answerable children of a problem-environment for completion propagation (§9).
-4. `mount` runs **after** the Modulus agent is ready and the initial `PAGE_STATE_RESTORED`/`AGENT_READY_OFFLINE` has been reduced. Persisted state is already in the model when `mount` runs.
+4. `mount` runs **after** the initial `PAGE_STATE_RESTORED` / `AGENT_READY_OFFLINE` has been reduced, but **before** the first render. Persisted state is already in the model when `mount` runs; the DOM has not yet been projected. This "reduce → mount → render → persist" boot sequence is what makes DOM attribute-order deterministic across first-visit and reload paths — every `setAttribute` in `mount` happens on a DOM that no render has touched, so attribute insertion order depends only on mount code, not on prior state.
 5. `mount` MUST NOT create content DOM. It MAY create control chrome (buttons, popovers) subject to §13.
 6. `mount` MUST NOT read learner state from the DOM. It reads authored configuration only (§10).
 7. `mount` MAY read the current entry via `document.getElementById(el.id)` and kernel-provided helpers, but SHOULD rely on `registerRender` for state-driven UI updates.

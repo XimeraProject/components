@@ -1,0 +1,13 @@
+{
+  "name": "ximera-fixtures",
+  "private": true,
+  "scripts": {
+    "build": "tex4npm build",
+    "dev": "tex4npm watch"
+  },
+  "dependencies": {
+    "tex4npm": "*",
+    "ximera-core": "*"
+  },
+  "type": "module"
+}

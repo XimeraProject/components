@@ -1,0 +1,11 @@
+\ProvidesPackage{button}[2025/05/26 \button{} command for Ximera]
+
+% PDF mode: draw a box around the text.
+\newcommand{\button}[1]{\fbox{#1}}
+
+% HTML mode (tex4ht): emit a native <button> element.
+\ifdefined\HCode
+  \renewcommand{\button}[1]{%
+    \HCode{<button>}#1\HCode{</button>}%
+  }
+\fi

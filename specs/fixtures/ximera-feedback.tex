@@ -1,0 +1,36 @@
+\documentclass{ximera}
+
+\title{ximera-feedback fixture}
+\author{Phase 0}
+
+\begin{document}
+\begin{abstract}
+Fixture for the \texttt{ximera-feedback} spec. One problem with both an \texttt{attempt} feedback (shown after any submission) and a \texttt{correct} feedback (shown only when the problem completes). The \texttt{script}-flavor feedback is not exercised --- it is deferred with \texttt{ximera-validator}.
+\end{abstract}
+
+\maketitle
+
+\begin{problem}
+  My favorite number is $y = \answer{17}$.
+
+  \begin{feedback}[attempt]
+    You made a first attempt --- keep trying!
+  \end{feedback}
+
+  \begin{feedback}[correct]
+    I have always loved the number 17.  It is prime, and it is the sum of the first four primes.
+  \end{feedback}
+\end{problem}
+
+\begin{problem}
+  Find two integers that sum to twenty-five, or rather
+  \[
+    \sqrt{\answer{16}} = 4 = \frac{8}{\answer{2}}.
+  \]
+
+  \begin{feedback}[attempt]
+    Not quite --- check your arithmetic.
+  \end{feedback}
+\end{problem}
+
+\end{document}

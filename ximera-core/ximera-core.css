@@ -1,0 +1,290 @@
+/* ============================================================
+   ximera-core.css — CSS state machine for Ximera interactive pages
+   All visual state is driven by data-state attributes set by render.js.
+   ============================================================ */
+
+/* ─── Problem environments ───────────────────────────────────────────────── */
+
+/* Blocking problems start invisible; they preserve layout space so MathJax
+   can still measure them, but are unreachable until their parent completes. */
+.problem-environment[data-blocking] {
+  visibility: hidden;
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.problem-environment[data-blocking][data-state~="available"] {
+  visibility: visible;
+  position: relative;
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 0.4s ease;
+}
+
+.problem-environment[data-state~="complete"] {
+  border-left: 3px solid #4caf50;
+  padding-left: 0.5em;
+}
+
+/* ─── Feedback ───────────────────────────────────────────────────────────── */
+
+.feedback {
+  display: none;
+}
+
+.feedback[data-state="visible"] {
+  display: block;
+}
+
+/* ─── Answer blanks (MathJax overlay) ───────────────────────────────────── */
+
+/* Wrapper around the math element + invisible state-holder spans.
+   Inline math uses a <span> (display: inline).
+   Display math uses a <div> (display: block by default — no override needed). */
+span.ximera-math-with-answers {
+  display: inline;
+}
+
+/* The \cssId placeholder element inside the MathJax output.
+   JS sets position:relative and display:inline-block on it so the
+   absolutely-positioned input and popover are anchored to it. */
+.ximera-answer-input {
+  box-sizing: border-box;
+  /* position/top/left/width/height are set by JS from the MathJax placeholder */
+  /* No min-width here: the \hspace in the phantom is the authoritative minimum */
+  border: 1px solid #aaa;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.95);
+  text-align: center;
+  outline: none;
+  /* Inherit the math font metrics so the input blends with the expression */
+  font-size: inherit;
+  font-family: inherit;
+  line-height: normal;
+  padding: 1px 3px;
+}
+
+.ximera-answer-input:focus {
+  border-color: #4a90d9;
+  box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.25);
+}
+
+/* State styles driven by the invisible state-holder span's data-state.
+   The :has() selector reaches from the placeholder (which contains the input)
+   up to the wrapper, then back down. Use direct sibling relationship instead:
+   the state-holder is a sibling of the mathjax span inside the wrapper. */
+.answer.respondable[data-state~="correct"] ~ * .ximera-answer-input,
+.ximera-math-with-answers:has(.answer.respondable[data-state~="correct"]) .ximera-answer-input {
+  border-color: #2a7a2a;
+  background: #f0fff0;
+  color: #1a5c1a;
+}
+
+.ximera-math-with-answers:has(.answer.respondable[data-state~="attempted"]) .ximera-answer-input {
+  border-color: #c00;
+  background: #fff5f5;
+}
+
+/* Math-preview popover: positioned above the placeholder (= above the input).
+   Sits inside the placeholder so it moves with the math on reflow. */
+.ximera-math-popover {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px 8px;
+  z-index: 200;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font-size: 0.9em;
+}
+
+/* Check / submit buttons */
+.ximera-check-btn,
+.ximera-submit-btn {
+  display: inline-block;
+  padding: 3px 10px;
+  font-size: 0.85em;
+  border: 1px solid #2196f3;
+  border-radius: 3px;
+  background: #2196f3;
+  color: #fff;
+  cursor: pointer;
+  vertical-align: middle;
+  margin-left: 0.4em;
+}
+
+.ximera-check-btn:hover,
+.ximera-submit-btn:hover {
+  background: #1976d2;
+  border-color: #1976d2;
+}
+
+.ximera-check-btn:disabled,
+.ximera-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ─── Multiple choice & select all ──────────────────────────────────────── */
+
+.multiple-choice,
+.select-all {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4em;
+  margin: 0.8em 0;
+}
+
+.multiple-choice .choice,
+.select-all .choice {
+  display: inline-block;
+  padding: 0.35em 0.75em;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  background: #fafafa;
+  transition: background 0.15s;
+  max-width: 40em;
+}
+
+.multiple-choice .choice:hover,
+.select-all .choice:hover {
+  background: #eef4fb;
+}
+
+.multiple-choice .choice[data-state~="selected"],
+.select-all .choice[data-state~="selected"] {
+  background: #ddeeff;
+  border-color: #4a90d9;
+}
+
+.multiple-choice .choice[data-state~="eliminated"],
+.select-all .choice[data-state~="eliminated"] {
+  opacity: 0.45;
+  cursor: default;
+  text-decoration: line-through;
+  pointer-events: none;
+}
+
+.multiple-choice[data-state~="correct"] .choice.correct,
+.select-all[data-state~="correct"] .choice.correct {
+  background: #e8f8e8;
+  border-color: #2a7a2a;
+  color: #1a5c1a;
+}
+
+.multiple-choice[data-state~="correct"] .ximera-check-btn,
+.select-all[data-state~="correct"] .ximera-check-btn {
+  display: none;
+}
+
+/* ─── Word choice (inline dropdown) ──────────────────────────────────────── */
+
+.word-choice {
+  display: inline-block;
+  vertical-align: baseline;
+}
+
+.word-choice select.ximera-word-select {
+  font-size: inherit;
+  font-family: inherit;
+  padding: 1px 4px;
+  border: 1px solid #aaa;
+  border-radius: 3px;
+  background: #fafafa;
+  cursor: pointer;
+}
+
+.word-choice[data-state~="correct"] select.ximera-word-select {
+  border-color: #2a7a2a;
+  background: #f0fff0;
+  color: #1a5c1a;
+}
+
+.word-choice[data-state~="attempted"] select.ximera-word-select {
+  border-color: #c00;
+  background: #fff5f5;
+}
+
+/* ─── Free response ───────────────────────────────────────────────────────── */
+
+.free-response {
+  margin: 0.8em 0;
+}
+
+.free-response textarea.ximera-free-response-input {
+  display: block;
+  width: 100%;
+  min-height: 6em;
+  padding: 0.5em;
+  font-size: inherit;
+  font-family: inherit;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.free-response textarea.ximera-free-response-input:focus {
+  outline: none;
+  border-color: #4a90d9;
+  box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.25);
+}
+
+.free-response[data-state="submitted"] textarea.ximera-free-response-input {
+  background: #f0fff0;
+  border-color: #2a7a2a;
+}
+
+.free-response[data-state="submitted"] .ximera-submit-btn {
+  display: none;
+}
+
+/* ─── Hints ───────────────────────────────────────────────────────────────── */
+
+/* Hints from ximera.4ht render as:
+     <div class="accordion">
+       <h3 class="xmhint">Hint</h3>
+       <div class="accordion-item xmhint-content">...</div>
+     </div>
+*/
+
+h3.xmhint {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  font-size: 1em;
+  margin: 0.5em 0 0.2em;
+  color: #555;
+}
+
+h3.xmhint::before {
+  content: '▶';
+  font-size: 0.65em;
+  transition: transform 0.2s;
+  display: inline-block;
+}
+
+h3.xmhint[aria-expanded="true"]::before {
+  transform: rotate(90deg);
+}
+
+/* Content hidden until HINT_REVEAL */
+.xmhint-content {
+  display: none;
+  padding: 0.5em 0 0.5em 1.2em;
+  border-left: 3px solid #ccc;
+  margin: 0.2em 0 0.8em 0.4em;
+}
+
+.xmhint-content[data-state="visible"] {
+  display: block;
+}

@@ -1,0 +1,31 @@
+\documentclass{ximera}
+
+\title{ximera-hint fixture}
+\author{Phase 0}
+
+\begin{document}
+\begin{abstract}
+Fixture for the \texttt{ximera-hint} spec. One problem with three hints, exercising per-hint click-to-reveal in document order. Non-answerable component: revealing a hint MUST NOT set any answerable's \texttt{complete}.
+\end{abstract}
+
+\maketitle
+
+\begin{problem}
+  What is $2 + 2$?
+
+  My favorite value is $y = \answer{4}$.
+
+  \begin{hint}
+    First, count on your fingers.
+  \end{hint}
+
+  \begin{hint}
+    If you run out of fingers, count on your toes.
+  \end{hint}
+
+  \begin{hint}
+    The answer is an even number less than five.
+  \end{hint}
+\end{problem}
+
+\end{document}

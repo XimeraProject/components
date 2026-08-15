@@ -1,0 +1,13 @@
+{
+  "name": "ximera-core",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "index.js",
+  "latex": {
+    "css": ["ximera-core.css"]
+  },
+  "dependencies": {
+    "@modulus-learning/agent": "*",
+    "math-expressions": "*"
+  }
+}

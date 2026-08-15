@@ -1,0 +1,13 @@
+{
+  "name": "my-course",
+  "scripts": {
+    "build": "tex4npm build",
+    "dev": "tex4npm watch"
+  },
+  "dependencies": {
+    "my-button": "*",
+    "tex4npm": "*",
+    "ximera-core": "*"
+  },
+  "type": "module"
+}

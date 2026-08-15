@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>tex4npm — Design Overview</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/night.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css">
+  <style>
+    :root {
+      --accent: #e67e22;
+      --accent2: #3498db;
+      --light: #ecf0f1;
+      --dim: #95a5a6;
+    }
+
+    .reveal { font-size: 28px; }
+
+    .reveal h1, .reveal h2 { color: var(--accent); }
+    .reveal h3 { color: var(--accent2); }
+
+    .reveal .slides section { text-align: left; }
+    .reveal .slides section.center { text-align: center; }
+
+    /* pipeline step boxes */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 0.4em;
+      flex-wrap: wrap;
+      font-size: 0.75em;
+      margin: 0.8em 0;
+    }
+    .step {
+      background: #2c3e50;
+      border: 1px solid var(--accent2);
+      border-radius: 4px;
+      padding: 0.35em 0.7em;
+      white-space: nowrap;
+    }
+    .step.highlight { border-color: var(--accent); color: var(--accent); }
+    .arrow { color: var(--dim); }
+
+    /* two-column layout */
+    .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4em; align-items: start; }
+    .cols.w60 { grid-template-columns: 3fr 2fr; }
+
+    /* small helper classes */
+    .tag {
+      display: inline-block;
+      background: var(--accent);
+      color: #1a1a1a;
+      border-radius: 3px;
+      padding: 0.1em 0.5em;
+      font-size: 0.7em;
+      font-weight: bold;
+      vertical-align: middle;
+    }
+    .tag.blue  { background: var(--accent2); color: #1a1a1a; }
+    .tag.green { background: #27ae60;       color: #1a1a1a; }
+
+    .reveal pre { font-size: 0.55em; }
+    .reveal ul { margin-left: 1em; }
+    .reveal ul li { margin: 0.25em 0; }
+
+    .dim { color: var(--dim); font-size: 0.85em; }
+    .accent { color: var(--accent); }
+    .blue { color: var(--accent2); }
+
+    .box {
+      background: rgba(255,255,255,0.05);
+      border-left: 3px solid var(--accent2);
+      border-radius: 3px;
+      padding: 0.45em 0.75em;
+      margin: 0.35em 0;
+    }
+    .box.orange { border-left-color: var(--accent); }
+    .box.green { border-left-color: #27ae60; }
+
+    .reveal .title-slide h1 { font-size: 2em; }
+    .reveal .title-slide p { color: var(--dim); font-size: 0.9em; }
+  </style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ─────────────────────────────────────────── TITLE ── -->
+<section class="center title-slide">
+  <h1>tex4npm</h1>
+  <h3>A webpack-style build tool for Ximera</h3>
+  <p>LaTeX → HTML via the conceit of npm packages and an Elm-architecture runtime</p>
+</section>
+
+<!-- ─────────────────────────────────────────── WHAT IS IT ── -->
+<section>
+  <h2>What problem does it solve?</h2>
+  <div class="cols">
+    <div>
+      <p>Authors write interactive math courses in <strong>LaTeX</strong> using the <code>ximera</code> document class.</p>
+      <p>tex4npm compiles those <code>.tex</code> files to <strong>interactive HTML</strong> — like webpack, but for LaTeX.</p>
+      <div class="box orange">
+        Modeled on the webpack developer experience:<br>
+        declare dependencies in <code>package.json</code>,<br>
+        configure via <code>tex4npm.config.js</code>,<br>
+        run via npm scripts.
+      </div>
+    </div>
+    <div>
+<pre><code class="language-text">my-course/
+├── package.json
+├── tex4npm.config.js
+├── src/
+│   ├── intro.tex
+│   └── chapter1/
+│       └── limits.tex
+└── dist/          ← compiled output
+    ├── ximera.js
+    ├── ximera.css
+    └── src/
+        ├── intro.html
+        └── chapter1/
+            └── limits.html</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── PACKAGE.JSON ── -->
+<section>
+  <h2>npm packages carry LaTeX <em>and</em> JavaScript</h2>
+  <p>A package like <code>my-button</code> declares both its <code>.sty</code> file and its client-side JS in one <code>package.json</code>.</p>
+  <div class="cols">
+    <div>
+<pre><code class="language-json">// my-button/package.json
+{
+  "name": "my-button",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "index.js",
+  "latex": {
+    "sty": ["my-button.sty"]
+  }
+}</code></pre>
+    </div>
+    <div>
+<pre><code class="language-latex">% my-button/my-button.sty
+
+% PDF mode: box around text
+\newcommand{\button}[1]{\fbox{#1}}
+
+% HTML mode (tex4ht): native element
+\ifdefined\HCode
+  \renewcommand{\button}[1]{%
+    \HCode{<button>}#1\HCode{</button>}%
+  }
+\fi</code></pre>
+    </div>
+  </div>
+  <div class="box">
+    The <code>"latex"</code> field is the signal. <code>sty</code> lists LaTeX packages; <code>css</code> lists stylesheets to bundle. tex4npm discovers every installed package that has this field.
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── HIGH-LEVEL PIPELINE ── -->
+<section>
+  <h2>High-level build pipeline</h2>
+  <p>Each <code>npm run build</code> runs three phases:</p>
+  <div class="pipeline" style="font-size:0.85em; justify-content:center; margin: 0.6em 0;">
+    <div class="step highlight">① Pre-build (stage)</div>
+    <div class="arrow">→</div>
+    <div class="step highlight">② Bundle (esbuild)</div>
+    <div class="arrow">→</div>
+    <div class="step highlight">③ Compile .tex files</div>
+  </div>
+  <div class="cols">
+    <div class="box orange">
+      <strong>① Stage</strong><br>
+      Scans <code>node_modules</code> for <code>"latex"</code> packages, symlinks <code>.sty</code> files so TeX can find them, writes a JS bundle entry file.
+    </div>
+    <div class="box orange">
+      <strong>② Bundle</strong><br>
+      esbuild bundles all package JS and CSS into <code>dist/ximera.js</code> and <code>dist/ximera.css</code>.
+    </div>
+    <div class="box orange" style="grid-column: 1 / -1">
+      <strong>③ Compile</strong><br>
+      For every dirty <code>.tex</code> file: run the full LaTeX→HTML pipeline, then post-process the HTML. Parallelised with a concurrency queue.
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── PRE-BUILD ── -->
+<section>
+  <h2>Pre-build: the stage phase</h2>
+  <p>Runs once per build invocation before any <code>.tex</code> file is touched.</p>
+
+  <div class="box" style="margin-bottom:0.8em">
+    <strong>Stage 1 — Discover packages</strong><br>
+    <span class="dim">fast-glob finds all <code>node_modules/*/package.json</code>. Filter to those with a <code>"latex"</code> key.</span>
+  </div>
+  <div class="box" style="margin-bottom:0.8em">
+    <strong>Stage 2 — Populate <code>.tex4npm/texmf/</code></strong><br>
+    <span class="dim">Wipe and rebuild <code>.tex4npm/texmf/tex/latex/</code>. Symlink each declared <code>.sty</code> file into that directory. Injected via <code>TEXINPUTS=.tex4npm/texmf//:…</code> at compile time.</span>
+  </div>
+  <div class="box" style="margin-bottom:0.8em">
+    <strong>Stage 3 — Write <code>.tex4npm/bundle-entry.js</code></strong><br>
+    <span class="dim">One <code>import 'package-name'</code> per discovered package, plus CSS imports for any declared <code>.css</code> files.</span>
+  </div>
+  <div class="box">
+    <strong>Stage 4 — Run esbuild</strong><br>
+    <span class="dim">Bundle the entry into <code>dist/ximera.js</code> + <code>dist/ximera.css</code>. Sub-second; runs unconditionally every build.</span>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── TEXMF SYMLINKS ── -->
+<section>
+  <h2>How <code>.sty</code> files reach LaTeX</h2>
+  <div class="cols w60">
+    <div>
+<pre><code class="language-text">.tex4npm/
+└── texmf/
+    └── tex/
+        └── latex/
+            ├── my-button.sty  →  ../../node_modules/my-button/my-button.sty
+            └── ximera-core/   (no sty — JS/CSS only)
+
+TEXINPUTS=.tex4npm/texmf//:&lt;original&gt;</code></pre>
+      <p class="dim">The <code>//</code> suffix tells kpathsea to search recursively. LaTeX finds every staged <code>.sty</code> without touching the system TeX installation.</p>
+    </div>
+    <div>
+      <div class="box green">
+        <strong>Symlink → live edits</strong><br>
+        <span class="dim">Symlinks are preferred so that edits to a locally <code>npm link</code>ed package are immediately visible without re-running the pre-build phase.</span>
+      </div>
+      <div class="box" style="margin-top:0.6em">
+        <strong>Hard link fallback</strong><br>
+        <span class="dim">Used when symlinks require elevated privileges (Windows).</span>
+      </div>
+      <div class="box" style="margin-top:0.6em">
+        <strong>Copy last resort</strong><br>
+        <span class="dim">Cross-drive or restricted filesystems.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── COMPILE PIPELINE ── -->
+<section>
+  <h2>Per-file compilation pipeline</h2>
+  <p>Every eligible <code>.tex</code> file (contains <code>\begin{document}</code>) passes through four steps. All run with <code>cwd</code> = the file's directory.</p>
+  <div class="pipeline" style="justify-content: center; margin: 0.5em 0;">
+    <div class="step highlight">1 pdflatex</div>
+    <div class="arrow">→</div>
+    <div class="step highlight">2 latex ×2</div>
+    <div class="arrow">→</div>
+    <div class="step highlight">3 tex4ht</div>
+    <div class="arrow">→</div>
+    <div class="step highlight">4 t4ht</div>
+  </div>
+  <div class="cols">
+    <div>
+      <div class="box orange">
+        <strong>1 — pdflatex</strong><br>
+        <span class="dim">With <code>tikzexport</code> and <code>xake</code> class options. Generates <code>.aux</code>, PDF, and <code>.fls</code> (recorder).</span>
+      </div>
+      <div class="box orange">
+        <strong>2 — latex ×2</strong><br>
+        <span class="dim">tex4ht.sty injection preamble passed as a single argument. First pass generates <code>.4ct/.4tc</code> hook files; second uses them to emit HTML into the DVI.</span>
+      </div>
+    </div>
+    <div>
+      <div class="box orange">
+        <strong>3 — tex4ht</strong><br>
+        <span class="dim">Converts DVI → HTML. Config: <code>ximera,charset=utf-8,-css</code>. Writes <code>stem.lg</code> listing every file it produced.</span>
+      </div>
+      <div class="box orange">
+        <strong>4 — t4ht</strong><br>
+        <span class="dim">Post-processes <code>stem.lg</code>: CSS output, image handling, other file generation.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── TEX4HT INJECTION ── -->
+<section>
+  <h2>The tex4ht.sty injection trick</h2>
+  <p>Instead of invoking <code>htlatex</code> as a shell-script wrapper, tex4npm calls <code>latex</code> directly with the injection preamble extracted verbatim from the htlatex source.</p>
+<pre><code class="language-bash">latex -recorder -interaction=nonstopmode -shell-escape \
+  "\makeatletter\def\HCode{...}\def\Link#1.a.b.c.{%
+     \g@addto@macro\@documentclasshook{%
+       \RequirePackage[#1,html]{tex4ht}}...}%
+   \makeatother\HCode ximera,charset=utf-8,-css.a.b.c.\input stem"</code></pre>
+  <div class="box">
+    <strong>Why?</strong> <code>htlatex</code> is a shell script that itself calls <code>latex</code> with this preamble. By calling <code>latex</code> directly, tex4npm controls every flag (especially <code>-recorder</code> for the <code>.fls</code> dependency log) without subprocess indirection.
+  </div>
+  <div class="box" style="margin-top:0.5em">
+    <strong>Exit code caveat</strong> — <code>latex</code> exits with code&nbsp;1 even on successful DVI production when there are recoverable warnings. tex4npm uses <code>reject: false</code> (execa) and lets the downstream <code>tex4ht</code> step fail if no <code>.dvi</code> was actually produced.
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── DIRTY CHECKING ── -->
+<section>
+  <h2>Incremental builds: dirty checking</h2>
+  <p>tex4npm avoids recompiling files whose dependencies haven't changed.</p>
+  <div class="cols w60">
+    <div>
+<pre><code class="language-html">&lt;!-- injected into &lt;head&gt; after each compile --&gt;
+&lt;meta name="dependency"
+  content="a3f9c2... src/intro.tex"&gt;
+&lt;meta name="dependency"
+  content="7b1e4d... src/shared/macros.tex"&gt;
+&lt;meta name="dependency"
+  content="f02c89... .tex4npm/texmf/tex/latex/my-button.sty"&gt;</code></pre>
+      <p class="dim">One tag per file that <code>latex -recorder</code> listed as an INPUT. Paths relative to the project root.</p>
+    </div>
+    <div>
+      <div class="box">
+        <strong>On next build:</strong><br>
+        Re-read existing <code>.html</code>, parse the dependency tags, SHA1-hash each named file on disk. If any hash differs (or the <code>.html</code> doesn't exist) → file is <span class="accent">dirty</span>.
+      </div>
+      <div class="box" style="margin-top:0.6em">
+        <strong>Propagation:</strong><br>
+        If <code>macros.tex</code> changes, every <code>.tex</code> that inputs it is also marked dirty — without any special-casing.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── DEPENDENCY GRAPH ── -->
+<section>
+  <h2>Dependency graph &amp; topological sort</h2>
+  <p>Before compiling, tex4npm builds a DAG of <code>\input</code>, <code>\activity</code>, <code>\include</code> references between <code>.tex</code> files and sorts it topologically.</p>
+  <div class="cols">
+    <div>
+<pre><code class="language-text">xourse.tex
+  \activity{chapter1/limits.tex}
+  \activity{chapter1/derivatives.tex}
+
+chapter1/limits.tex
+  \input{../shared/macros.tex}</code></pre>
+    </div>
+    <div>
+      <div class="box">
+        <code>macros.tex</code> compiles first.<br>
+        <code>limits.tex</code> and <code>derivatives.tex</code> compile next (in parallel).<br>
+        <code>xourse.tex</code> compiles last (it reads activity <code>&lt;title&gt;</code> and <code>&lt;abstract&gt;</code> from already-compiled HTML).
+      </div>
+    </div>
+  </div>
+  <div class="box" style="margin-top:0.7em">
+    <strong>Concurrency model</strong> — the p-queue concurrency limit wraps <em>only</em> the execa subprocess calls (pdflatex/latex). Artifact copying, SHA1 hashing, and HTML post-processing run outside the queue, fully concurrent across all in-flight files.
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── ARTIFACT HANDLING ── -->
+<section>
+  <h2>Artifact collection &amp; cleanup</h2>
+  <p>Two separate sources of output files, because <code>latex</code> and <code>tex4ht</code> are separate binaries with separate output sets.</p>
+  <div class="cols">
+    <div>
+      <div class="box">
+        <strong>From <code>stem.fls</code></strong> (latex <code>-recorder</code>):<br>
+        <span class="dim">INPUT lines → dependency metadata<br>OUTPUT lines → latex-side outputs</span>
+      </div>
+      <div class="box" style="margin-top:0.5em">
+        <strong>From <code>stem.lg</code></strong> (written by tex4ht):<br>
+        <span class="dim"><code>File: name</code> lines → tex4ht outputs (HTML, SVG, PNG, CSS)</span>
+      </div>
+    </div>
+    <div>
+      <div class="box green">
+        <strong>Artifacts</strong> <span class="tag green">copy to dist/</span><br>
+        <span class="dim"><code>.html</code>, <code>.svg</code>, <code>.png</code>, <code>.css</code>, <code>.sagetex.sage</code></span>
+      </div>
+      <div class="box orange" style="margin-top:0.5em">
+        <strong>Temps</strong> <span class="tag">delete</span><br>
+        <span class="dim"><code>.aux</code>, <code>.dvi</code>, <code>.log</code>, <code>.4ct</code>, <code>.4tc</code>, <code>.fls</code>, <code>.xmjax</code>, <code>.xmcss</code>, …</span>
+      </div>
+    </div>
+  </div>
+  <p class="dim" style="margin-top:0.5em">Artifacts mirror the source hierarchy: <code>src/ch1/limits.svg</code> → <code>dist/src/ch1/limits.svg</code>. Relative paths in HTML stay valid.</p>
+</section>
+
+<!-- ─────────────────────────────────────────── POSTPROCESS A ── -->
+<section>
+  <h2>HTML post-processing (cheerio) <span class="dim" style="font-size:0.6em">1 / 2</span></h2>
+  <p>Each compiled <code>.html</code> in <code>dist/</code> is parsed and transformed in sequence:</p>
+  <div class="box" style="margin:0.4em 0">
+    <span class="tag blue">1</span> <strong>Remove empty <code>&lt;p&gt;&lt;/p&gt;</code></strong> — spurious blank paragraphs emitted by tex4ht
+  </div>
+  <div class="box" style="margin:0.4em 0">
+    <span class="tag blue">2</span> <strong>Inject dependency metadata</strong> — one <code>&lt;meta name="dependency" content="SHA1 path"&gt;</code> per INPUT file from <code>.fls</code>
+  </div>
+  <div class="box" style="margin:0.4em 0">
+    <span class="tag blue">3</span> <strong>Inject <code>.xmjax</code></strong> — filtered <code>\newcommand</code> definitions as <code>&lt;script type="math/tex"&gt;</code> for MathJax
+  </div>
+  <div class="box" style="margin:0.4em 0">
+    <span class="tag blue">4</span> <strong>Inject <code>.xmcss</code></strong> — ad-hoc CSS (e.g. minipage widths) as a <code>&lt;style&gt;</code> block
+  </div>
+  <div class="box" style="margin:0.4em 0">
+    <span class="tag blue">5</span> <strong>Strip old CDN scripts</strong> — remove <code>ximera.osu.edu</code> <code>&lt;link&gt;</code> and <code>&lt;script&gt;</code> injected by <code>ximera.cfg</code>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── POSTPROCESS B ── -->
+<section>
+  <h2>HTML post-processing (cheerio) <span class="dim" style="font-size:0.6em">2 / 2</span></h2>
+  <div class="box" style="margin:0.4em 0">
+    <span class="tag blue">6</span> <strong>Mark blocking problems</strong> — add <code>data-blocking=""</code> to every <code>.problem-environment</code> that directly contains at least one answerable
+  </div>
+  <div class="box" style="margin:0.4em 0">
+    <span class="tag blue">7</span> <strong>Inject bundle refs</strong> — append <code>&lt;link rel="stylesheet" href="ximera.css"&gt;</code> and <code>&lt;script defer src="ximera.js"&gt;</code>
+  </div>
+  <div class="box" style="margin:0.4em 0">
+    <span class="tag blue">8</span> <strong>Enrich xourse links</strong> (xourse files only) — read the compiled activity HTML to inject <code>&lt;h2&gt;</code> title and <code>&lt;h3&gt;</code> abstract into each <code>&lt;a class="activity"&gt;</code> link
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── XMJAX / XMCSS ── -->
+<section>
+  <h2>The <code>.xmjax</code> and <code>.xmcss</code> sidecar files</h2>
+  <div class="cols">
+    <div>
+      <h3>.xmjax — MathJax preamble</h3>
+      <p class="dim">Generated by <code>ximera.cls</code> during the tex4ht pass. Every <code>\newcommand</code> and <code>\DeclareMathOperator</code> in the document gets written to this file.</p>
+      <div class="box">
+        <strong>Why?</strong> MathJax renders math in the browser but doesn't know the author's custom macros. The preamble is filtered (remove lines with <code>:</code>, <code>@</code>, <code>\label</code>, …) and injected as <code>&lt;script type="math/tex"&gt;</code>.
+      </div>
+    </div>
+    <div>
+      <h3>.xmcss — ad-hoc CSS</h3>
+      <p class="dim">Written by the <code>\xmCSS{…}</code> macro in <code>ximera.cfg</code>. Currently used for <code>minipage</code> width percentages computed in TeX.</p>
+      <div class="box">
+        <strong>Why?</strong> The HTML tag for a minipage is emitted <em>before</em> its width is known. The CSS file carries the computed value, which gets injected as a <code>&lt;style&gt;</code> block.
+      </div>
+      <p class="dim" style="margin-top:0.5em">Both files are classified as <strong>temps</strong> — deleted after post-processing, never copied to <code>dist/</code>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── ELM ARCHITECTURE ── -->
+<section>
+  <h2>The Elm-architecture runtime (<code>ximera-core</code>)</h2>
+  <p>The compiled <code>ximera.js</code> bundle implements a pure functional update loop.</p>
+  <div class="pipeline" style="justify-content:center; font-size:0.8em;">
+    <div class="step">DOM events</div>
+    <div class="arrow">→ dispatch(msg) →</div>
+    <div class="step highlight">update(model, msg)</div>
+    <div class="arrow">→ new model →</div>
+    <div class="step highlight">render(model)</div>
+    <div class="arrow">→ data-state →</div>
+    <div class="step">CSS</div>
+    <div class="arrow">→</div>
+    <div class="step">agent.setPageState</div>
+  </div>
+  <div class="cols" style="margin-top:0.5em">
+    <div>
+      <div class="box orange"><strong>Model</strong> — flat object keyed by DOM element ID. Stores per-element state: <code>{ available, complete, correct, attempt, chosen, … }</code></div>
+      <div class="box orange" style="margin-top:0.5em"><strong>update(model, msg)</strong> — pure function. Handles answer checks, choice selection, cascading problem unlock.</div>
+    </div>
+    <div>
+      <div class="box orange"><strong>render(model)</strong> — only DOM writer. Sets <code>el.dataset.state</code> on each element. CSS reads <code>data-state</code> and drives all visuals.</div>
+      <div class="box orange" style="margin-top:0.5em"><strong>agent</strong> — <code>@modulus-learning/agent</code> persists model to server via <code>setPageState(model)</code> and tracks progress with <code>setProgress(0–1)</code>.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── CSS STATE MACHINE ── -->
+<section>
+  <h2>CSS state machine</h2>
+  <p>All visual transitions are driven by <code>data-state</code> attributes. No inline styles. MathJax-safe: uses <code>visibility + position</code> instead of <code>display: none</code>.</p>
+  <div class="cols">
+    <div>
+<pre><code class="language-css">/* Hidden until available */
+.problem-environment[data-blocking] {
+  visibility: hidden;
+  position: absolute;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.problem-environment[data-state~="available"] {
+  visibility: visible;
+  position: relative;
+  opacity: 1;
+}</code></pre>
+    </div>
+    <div>
+<pre><code class="language-css">/* Feedback */
+.feedback {
+  visibility: hidden;
+  position: absolute;
+  opacity: 0;
+}
+.feedback[data-state="visible"] {
+  visibility: visible;
+  position: relative;
+  opacity: 1;
+}
+
+/* Correct answer */
+.answer[data-state~="correct"] input {
+  border-color: #4caf50;
+}</code></pre>
+    </div>
+  </div>
+  <div class="box" style="margin-top:0.5em">
+    <strong>Why <code>visibility</code> not <code>display</code>?</strong> MathJax needs to measure element dimensions to position math correctly. <code>display:none</code> removes elements from layout; <code>visibility:hidden; position:absolute</code> hides them visually while keeping them measurable.
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── COMPONENT PACKAGES ── -->
+<section>
+  <h2>Component packages — the registration pattern</h2>
+  <p>Any npm package can hook into the runtime by calling <code>register()</code> on import.</p>
+  <div class="cols">
+    <div>
+<pre><code class="language-js">// my-button/index.js
+import { register } from 'ximera-core';
+
+register('button', (el, dispatch) => {
+  el.classList.add('ximera-button');
+  el.addEventListener('click', () => {
+    dispatch({
+      type: 'BUTTON_CLICKED',
+      id: el.id,
+    });
+  });
+});</code></pre>
+    </div>
+    <div>
+      <div class="box">
+        <strong>How it works:</strong>
+        <ol style="margin:0.4em 0 0 1em; font-size:0.9em">
+          <li>Package calls <code>register(selector, mountFn)</code> on import (synchronous)</li>
+          <li>When the agent fires <code>onReady()</code>, the core iterates the registry and calls each <code>mountFn(el, dispatch)</code> once per matching DOM element</li>
+          <li><code>mountFn</code> attaches event listeners and can only call <code>dispatch(msg)</code> — it never reads the model directly</li>
+        </ol>
+      </div>
+      <div class="box" style="margin-top:0.5em">
+        One-way data flow: events → dispatch → update → render → CSS.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── PROBLEM UNLOCK ── -->
+<section>
+  <h2>Problem completion &amp; cascading unlock</h2>
+  <p>Replicates the old server's <code>ximera:complete</code> / <code>ximera:answer-needed</code> event chain, now as pure model updates.</p>
+  <div class="cols w60">
+    <div>
+<pre><code class="language-text">problem1  [data-blocking]
+  answer blank  ← \answer{17}
+  feedback[attempt]
+  feedback[correct]
+  problem2  [data-blocking]   ← unlocks when problem1 complete
+    answer blank
+    problem3  [data-blocking] ← unlocks when problem2 complete</code></pre>
+      <p class="dim" style="margin-top:0.4em">The <code>data-blocking</code> attribute is added by <code>postprocess.js</code> to every problem that directly contains at least one answerable.</p>
+    </div>
+    <div>
+      <div class="box orange">
+        <strong>propagateCorrectness(model, problemId)</strong>
+        <ol style="margin:0.4em 0 0 1em; font-size:0.88em">
+          <li>Find all direct answerables</li>
+          <li>If ALL correct → set <code>complete: true</code></li>
+          <li>Mark attempt &amp; correct feedback <code>visible</code></li>
+          <li>Set direct child blocking problems <code>available: true</code></li>
+          <li>Recurse to parent problem</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── PROGRESS ── -->
+<section>
+  <h2>Progress tracking</h2>
+  <p><code>calculateProgress(model)</code> mirrors the old server's recursive tree traversal.</p>
+  <div class="cols">
+    <div>
+<pre><code class="language-js">function nodeProgress(el, model) {
+  const state = model[el.id] ?? {};
+  const children = directChildProblems(el);
+
+  const selfValue = state.complete ? 1 : 0;
+  if (children.length === 0) return selfValue;
+
+  const childSum = children.reduce(
+    (sum, child) => sum + nodeProgress(child, model),
+    0
+  );
+  return (childSum + selfValue)
+       / (children.length + 1);
+}</code></pre>
+    </div>
+    <div>
+      <div class="box">
+        Each node contributes its own completion (0 or 1) averaged together with its children's progress. Top-level problems are averaged to produce the final 0–1 float.
+      </div>
+      <div class="box" style="margin-top:0.5em">
+        <strong>Sent to server:</strong><br>
+        <code>agent.setProgress(calculateProgress(model))</code><br>
+        called after every <code>dispatch()</code>.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── SOURCE LAYOUT ── -->
+<section>
+  <h2>Source module layout</h2>
+  <div class="cols">
+    <div>
+<pre><code class="language-text">tex4npm/src/
+  cli.js          CLI: build | watch | clean
+  config.js       load tex4npm.config.js
+  discover.js     find eligible .tex files
+  deps.js         parse \input{}, \activity{} refs
+  graph.js        DAG, topo sort, dirty propagation
+  dirty.js        SHA1 dirty-check via &lt;meta&gt; tags
+  compile.js      pdflatex → latex×N → tex4ht → t4ht
+  artifacts.js    .fls/.lg parsing, copy/delete
+  postprocess.js  cheerio HTML transforms
+  bundle.js       esbuild integration
+  stage.js        pre-build: scan, symlink, entry gen
+  watch.js        chokidar → incremental rebuild</code></pre>
+    </div>
+    <div>
+<pre><code class="language-text">ximera-core/
+  index.js        agent init, dispatch(), register()
+  model.js        initialModel(), get/setElementState()
+  update.js       update(model, msg) → model
+  render.js       set data-state attributes
+  progress.js     calculateProgress(model) → 0..1
+  ximera-core.css CSS state machine
+
+my-button/
+  my-button.sty   \button{} LaTeX command
+  index.js        register('button', …)
+  package.json    "latex": { "sty": ["my-button.sty"] }</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── KEY DEPS ── -->
+<section>
+  <h2>Key dependencies</h2>
+  <style>
+    .dep-table { width: 100%; border-collapse: collapse; font-size: 0.78em; }
+    .dep-table th { text-align: left; color: var(--accent2); padding: 0.3em 0.6em; border-bottom: 1px solid #444; }
+    .dep-table td { padding: 0.3em 0.6em; border-bottom: 1px solid #2a2a2a; vertical-align: top; }
+    .dep-table td:first-child { white-space: nowrap; color: #f8c78e; }
+    .dep-table tr:hover td { background: rgba(255,255,255,0.03); }
+  </style>
+  <div class="cols">
+    <div>
+      <table class="dep-table">
+        <tr><th>npm package</th><th>purpose</th></tr>
+        <tr><td><code>execa</code></td><td>run pdflatex / latex / tex4ht as subprocesses</td></tr>
+        <tr><td><code>cheerio</code></td><td>server-side HTML DOM manipulation</td></tr>
+        <tr><td><code>esbuild</code></td><td>bundle JS + CSS from ximera packages</td></tr>
+        <tr><td><code>p-queue</code></td><td>throttle execa calls to <code>cpu_count / 2</code></td></tr>
+        <tr><td><code>chokidar</code></td><td>file watching for dev/watch mode</td></tr>
+        <tr><td><code>fast-glob</code></td><td>discover <code>.tex</code> files and packages</td></tr>
+        <tr><td><code>commander</code></td><td>CLI argument parsing</td></tr>
+        <tr><td><code>@modulus-learning/agent</code></td><td>OAuth + page-state / progress persistence</td></tr>
+      </table>
+    </div>
+    <div>
+      <table class="dep-table">
+        <tr><th>external tool</th><th>purpose</th></tr>
+        <tr><td><code>pdflatex</code></td><td>first-pass compilation, tikzexport, <code>.fls</code> recorder</td></tr>
+        <tr><td><code>latex</code></td><td>DVI-mode HTML conversion (with tex4ht injection)</td></tr>
+        <tr><td><code>tex4ht</code></td><td>DVI → HTML using <code>.4ct/.4tc</code> hook files</td></tr>
+        <tr><td><code>t4ht</code></td><td>post-processes <code>.lg</code>: CSS, images</td></tr>
+        <tr><td><code>sage</code></td><td>optional SageMath computation</td></tr>
+        <tr><td><code>ximera.cls</code></td><td>LaTeX document class (ximeraLatex repo)</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────────────────── END-TO-END A ── -->
+<section>
+  <h2>End-to-end: <code>npm run build</code> <span class="dim" style="font-size:0.6em">1 / 2 — setup</span></h2>
+<pre><code class="language-text">npm run build
+  └─ tex4npm build
+       ├─ loadConfig()                        read tex4npm.config.js
+       │
+       ├─ stage(config)
+       │    ├─ findLatexPackages(configDir)    glob node_modules for "latex" key
+       │    ├─ populateTexmf(texmf, packages)  symlink .sty files into .tex4npm/texmf/
+       │    ├─ generateBundleEntry(tex4npmDir) write bundle-entry.js
+       │    └─ esbuild(…)                      → dist/ximera.js + dist/ximera.css
+       │
+       ├─ discover(root)                       find all eligible .tex files
+       ├─ buildGraph(texFiles) + topoSort()    DAG of \input / \activity refs
+       ├─ isDirty(htmlPath) × N                check SHA1 hashes in &lt;meta&gt; tags
+       └─ propagateDirty(graph, dirtySet)      if dep changed, mark dependents dirty</code></pre>
+</section>
+
+<!-- ─────────────────────────────────────────── END-TO-END B ── -->
+<section>
+  <h2>End-to-end: <code>npm run build</code> <span class="dim" style="font-size:0.6em">2 / 2 — compile</span></h2>
+<pre><code class="language-text">compileBatch(dirtyFiles, config)
+  └─ [per file, p-queue capped at cpu_count/2]
+       ├─ compile(texPath)
+       │    ├─ pdflatex -recorder …stem
+       │    ├─ latex -recorder … (×2, tex4ht injection preamble)
+       │    ├─ tex4ht -f/stem -cunihtf -utf8
+       │    └─ t4ht -f/stem
+       │
+       ├─ parseFlsFile(stem.fls)              split into inputs + outputs
+       ├─ partitionOutputs()                  artifacts vs temps
+       ├─ copyArtifacts(→ outDir)
+       │
+       ├─ postprocess(stem.html)
+       │    ├─ removeEmptyParas / injectDependencyMeta
+       │    ├─ injectXmjax / injectXmcss
+       │    ├─ stripOldXimeraScripts / extractAnswerBlanks
+       │    ├─ markBlockingProblems / injectBundleRefs
+       │    └─ enrichActivityLinks  (xourse only)
+       │
+       └─ deleteTemps(.aux .dvi .4ct .4tc .fls .xmjax .xmcss …)</code></pre>
+</section>
+
+<!-- ─────────────────────────────────────────── FIN ── -->
+<section class="center">
+  <h2>Underview!</h2>
+  <div style="text-align:left; max-width: 680px; margin: 0 auto;">
+    <div class="box" style="margin:0.4em 0">
+      <span class="tag">npm</span> &nbsp;npm packages carry both <code>.sty</code> files and client-side JS/CSS via the <code>"latex"</code> field
+    </div>
+    <div class="box" style="margin:0.4em 0">
+      <span class="tag blue">TeX</span> &nbsp;LaTeX is compiled via <code>pdflatex → latex+tex4ht → t4ht</code>; <code>TEXINPUTS</code> injects symlinked <code>.sty</code> files
+    </div>
+    <div class="box" style="margin:0.4em 0">
+      <span class="tag blue">HTML</span> &nbsp;Post-processing marks blocking problems, injects the bundle, removes the old CDN
+    </div>
+    <div class="box" style="margin:0.4em 0">
+      <span class="tag green">JS</span> &nbsp;Elm architecture: pure <code>update(model, msg)</code> → <code>render(model)</code> → CSS state machine → server persistence via <code>@modulus-learning/agent</code>
+    </div>
+  </div>
+</section>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    slideNumber: true,
+    transition: 'slide',
+    transitionSpeed: 'fast',
+    width: 1100,
+    height: 820,
+    margin: 0.04,
+    plugins: [ RevealHighlight, RevealNotes ],
+    highlight: { highlightOnLoad: true },
+  });
+</script>
+</body>
+</html>

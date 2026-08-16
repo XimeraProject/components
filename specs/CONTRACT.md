@@ -456,6 +456,22 @@ ximera-<name>/
 
 The `"latex"` field is what makes the package participate in the tex4npm build (see `ARCHITECTURE.md` → "The dual LaTeX + JS package convention"). Phase 4 adds `"postprocess"`; Phase 5 adds `"4ht"`.
 
+### 15.1 The `"postprocess"` hook (Phase 4, D5)
+
+`"latex".postprocess` is a **relative path** (or an array of relative paths) resolving to an ES module inside the package. Each module MUST export a default async function `($, ctx) => void` where:
+
+- `$` is a cheerio-loaded HTML document (same instance shared with all other hooks during the same file's post-processing).
+- `ctx` is `{ htmlPath: string, projectRoot: string, outDir: string }` — absolute paths for the file currently being processed.
+
+Ordering guarantees:
+1. tex4npm runs its own generic transforms first (empty-para removal, dependency-meta injection, xmjax/xmcss preamble injection, stripping legacy CDN scripts).
+2. Then every package's `"postprocess"` hook runs, in package-discovery order (an alphabetized walk of `node_modules`).
+3. Finally tex4npm runs its bundle-ref injection and xourse-specific enrichment.
+
+Hooks MUST be independent — do not rely on cross-package ordering. Hooks MUST NOT read from or write to the filesystem outside `ctx.outDir`. Hooks MUST NOT `await` on network I/O.
+
+This addition is **semver-minor** for tex4npm and **not part of the kernel contract**: a package that omits the field is unaffected.
+
 ---
 
 ## 16. What is *not* in the contract

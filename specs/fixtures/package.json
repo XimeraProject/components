@@ -7,6 +7,7 @@
   },
   "dependencies": {
     "tex4npm": "*",
+    "ximera-answer": "*",
     "ximera-core": "*"
   },
   "type": "module"

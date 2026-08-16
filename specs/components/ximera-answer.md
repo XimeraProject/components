@@ -1,8 +1,10 @@
 # ximera-answer
 
-**Status:** Phase 0 draft. **The flagship.** Consumed by Phase 4.
+**Status:** Shipped in Phase 4. **The flagship.**
 **Legacy source:** `original-server/math-answer.js` (453 loc — the largest component in the legacy client).
 **Answerable:** yes.
+
+**Phase 4 as-shipped notes:** Format/tolerance passthrough was implemented at the **postprocess layer** (Strategy B in §2), not by widening `\answer` in `ximera.4ht` (Strategy A). Reason: tex4ht's mathjax mode passes math bodies through as raw LaTeX, so the HTML-mode `\answer` macro never actually fires — the postprocess regex is the only interception point that has access to the `[format=…,tolerance=…]` options. `\answer` in `ximera.4ht` is unchanged.
 
 ## 1. Purpose
 

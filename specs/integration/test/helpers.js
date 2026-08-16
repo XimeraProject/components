@@ -19,11 +19,43 @@ export function readFixtureBody(stem) {
 }
 
 // Re-import a fresh copy of a component's index.js so its module-level
-// register() calls fire again after resetKernel().
+// register() calls fire again after resetKernel(). Returns the imported
+// module (needed by ximera-answer for its mountReady() await).
 export async function reloadComponent(pkgName) {
   const url = new URL(
     `../node_modules/${pkgName}/index.js`,
     import.meta.url
   ).href + `?c=${Math.random()}`;
-  await import(url);
+  return import(url);
+}
+
+// Real MathJax typesets \cssId{placeholder-N}{\phantom{...}} into a DOM
+// span with id="placeholder-N". Happy-dom doesn't run MathJax; ximera-answer's
+// Phase B mount looks up that id and bails if absent. Call this before
+// mountFixture() to synthesize an empty placeholder span for every answer
+// state-holder in `body` — enough for the mount to install its input, button,
+// and popover so integration tests can drive them.
+export function simulateMathJaxPlaceholders(body) {
+  // Match every data-placeholder-id="ID" on a .answer.respondable span and
+  // inject <span id="ID"></span> into the enclosing .mathjax-inline or
+  // .mathjax-block if the id isn't already present.
+  const stateHolderRe = /<span[^>]*class="answer respondable"[^>]*data-placeholder-id="([^"]+)"[^>]*>/g;
+  const ids = [];
+  let m;
+  while ((m = stateHolderRe.exec(body)) !== null) ids.push(m[1]);
+
+  let out = body;
+  for (const id of ids) {
+    // Bare `id="…"` present as an attribute (not as the value of another
+    // attribute like data-placeholder-id). The leading whitespace/quote
+    // check discriminates between them.
+    const escaped = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (new RegExp(`[\\s"']id="${escaped}"`).test(out)) continue;
+    const holder = `<span id="${id}"></span>`;
+    out = out.replace(
+      new RegExp(`(<span[^>]*data-placeholder-id="${escaped}")`),
+      `${holder}$1`
+    );
+  }
+  return out;
 }

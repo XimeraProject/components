@@ -1,0 +1,43 @@
+/* ximera-answer — inline math answer input, check button, live-preview popover. */
+
+/* The state-holder span is invisible; the phantom span (created by MathJax
+   typesetting our \cssId'd \phantom) is where the input lives. */
+
+.ximera-answer-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0 0.25em;
+  border: 1px solid #999;
+  border-radius: 3px;
+  background: #fff;
+  font: inherit;
+  box-sizing: border-box;
+}
+.ximera-answer-input:disabled {
+  background: #eef;
+  color: #333;
+  border-color: #ccd;
+}
+
+.ximera-check-btn {
+  margin-left: 0.5em;
+  padding: 0.15em 0.6em;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ximera-math-popover {
+  position: absolute;
+  z-index: 100;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  padding: 0.3em 0.6em;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  font-size: 0.95em;
+}
+.ximera-math-popover[hidden] { display: none; }
+
+.answer.respondable[data-state~="correct"] ~ .ximera-check-btn { display: none; }

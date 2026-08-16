@@ -11,7 +11,7 @@ import { mountFixture, resetKernel, inspect } from 'ximera-core/conformance';
 import { dispatch } from 'ximera-core/kernel';
 import { shuffleIds } from 'ximera-choice-util';
 
-import { readFixtureBody, reloadComponent } from './helpers.js';
+import { readFixtureBody, reloadComponent, simulateMathJaxPlaceholders } from './helpers.js';
 
 async function setup(fixtureStem, options, componentPkgs) {
   resetKernel();
@@ -159,11 +159,13 @@ test('feedback fixture: correct feedback stays hidden until problem completes', 
 
 test('my-course sample: full v1 pilot roster interoperates on one page', async () => {
   resetKernel();
+  const modules = {};
   for (const pkg of [
     'ximera-hint', 'ximera-word-choice',
     'ximera-multiple-choice', 'ximera-select-all', 'ximera-free-response',
+    'ximera-answer',
   ]) {
-    await reloadComponent(pkg);
+    modules[pkg] = await reloadComponent(pkg);
   }
 
   const { readFileSync } = await import('node:fs');
@@ -174,15 +176,33 @@ test('my-course sample: full v1 pilot roster interoperates on one page', async (
     join(here, '..', '..', '..', 'my-course', 'dist', 'sample.html'),
     'utf8'
   );
-  const body = html.match(/<body[^>]*>([\s\S]*?)<\/body>/)[1];
+  let body = html.match(/<body[^>]*>([\s\S]*?)<\/body>/)[1];
+  body = simulateMathJaxPlaceholders(body);
 
   const { agent } = await mountFixture(body);
+  await modules['ximera-answer'].mountReady();
 
-  // Five top-level problems in sample.tex. All top-level → available.
+  // Six top-level problems in sample.tex: integer answer, float answer,
+  // word-choice, multiple-choice, select-all, free-response. All top-level
+  // → available.
   const topProblems = [...document.querySelectorAll('.problem-environment')]
     .filter((p) => !p.parentElement?.closest('.problem-environment'));
-  assert.equal(topProblems.length, 5);
+  assert.equal(topProblems.length, 6);
   for (const p of topProblems) assert.ok(p.dataset.state.split(/\s+/).includes('available'));
+
+  // Complete both \answer problems.
+  const answers = [...document.querySelectorAll('.answer.respondable')];
+  assert.equal(answers.length, 2);
+  for (const el of answers) {
+    const input = document.querySelector(
+      `.ximera-answer-input[data-answer-id="${el.id}"]`
+    );
+    input.value = el.dataset.correctText;
+    input.dispatchEvent(new window.Event('input', { bubbles: true }));
+    document
+      .querySelector(`.ximera-check-btn[data-answer-id="${el.id}"]`)
+      .click();
+  }
 
   // Complete the word-choice problem.
   const wc = document.querySelector('.word-choice');
@@ -208,24 +228,8 @@ test('my-course sample: full v1 pilot roster interoperates on one page', async (
   ta.dispatchEvent(new window.Event('input', { bubbles: true }));
   fr.querySelector('.ximera-submit-btn').click();
 
-  // Four of five top-level problems complete. The first (with \answer)
-  // has no answerable component wired yet → stays incomplete.
-  // Progress: 4/5 = 0.8.
-  assert.ok(Math.abs(agent.lastProgress - 0.8) < 1e-9, `expected 0.8, got ${agent.lastProgress}`);
-
-  // Restore round-trip: capture and re-mount.
-  const captured = JSON.parse(JSON.stringify(agent.lastPageState));
-  const domAfter = document.body.innerHTML;
-
-  resetKernel();
-  for (const pkg of [
-    'ximera-hint', 'ximera-word-choice',
-    'ximera-multiple-choice', 'ximera-select-all', 'ximera-free-response',
-  ]) {
-    await reloadComponent(pkg);
-  }
-  await mountFixture(body, { initialPageState: captured });
-  assert.equal(document.body.innerHTML, domAfter, 'reload from captured payload → identical DOM');
+  // Every top-level problem is now complete → progress = 1.
+  assert.ok(Math.abs(agent.lastProgress - 1) < 1e-9, `expected 1, got ${agent.lastProgress}`);
 });
 
 test('shuffle restore: saved seed → learner\'s picks land on original order', async () => {

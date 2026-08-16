@@ -1,6 +1,12 @@
-// Global setup: install happy-dom on Node, plus a stub MathJax that
-// resolves its startup promise immediately (ximera-answer's Phase B mount
-// awaits window.MathJax.startup.promise).
+// Global happy-dom setup + stub MathJax.
+//
+// MathJax is treated as an environment resource, not a dependency: we stub
+// the minimum surface ximera-answer's mount touches (startup.promise +
+// typesetPromise) so the async two-phase mount can run to completion in the
+// test process. We do NOT actually render the \cssId'd \phantom into a DOM
+// element — instead, test fixtures pre-populate the placeholder span at the
+// expected id, simulating what MathJax would produce.
+
 import { Window } from 'happy-dom';
 
 const w = new Window({
@@ -12,7 +18,6 @@ globalThis.window = w;
 globalThis.document = w.document;
 globalThis.HTMLElement = w.HTMLElement;
 globalThis.HTMLInputElement = w.HTMLInputElement;
-globalThis.HTMLSelectElement = w.HTMLSelectElement;
 globalThis.HTMLButtonElement = w.HTMLButtonElement;
 globalThis.Element = w.Element;
 globalThis.Node = w.Node;

@@ -1,0 +1,24 @@
+{
+  "name": "ximera-answer",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "index.js",
+  "latex": {
+    "css": ["ximera-answer.css"],
+    "postprocess": "postprocess.js"
+  },
+  "scripts": {
+    "test": "node --test 'test/**/*.test.js'"
+  },
+  "dependencies": {
+    "math-expressions": "*"
+  },
+  "peerDependencies": {
+    "ximera-core": "*"
+  },
+  "devDependencies": {
+    "cheerio": "^1.0.0",
+    "happy-dom": "^15.0.0",
+    "ximera-core": "*"
+  }
+}

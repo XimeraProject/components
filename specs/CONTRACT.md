@@ -443,10 +443,14 @@ Every `ximera-*` package ships:
 ximera-<name>/
 ├── package.json         "latex" field: {"sty": [...], "css": [...],
 │                                        "4ht": [...] (Phase 5),
+│                                        "cls": [...] (Phase 5, ximeraLatex only),
+│                                        "cfg": [...] (Phase 5, ximeraLatex only),
 │                                        "postprocess": "./postprocess.js" (Phase 4)}
 │                        "peerDependencies": { "ximera-core": "^1.0.0" }
 ├── <name>.sty           LaTeX-side rendering; \ifdefined\HCode branch emits
 │                        the DOM the mount function expects
+├── <name>.4ht           optional (Phase 5+): tex4ht hooks, input by the .sty inside
+│                        \ifdefined\HCode
 ├── index.js             calls register(...), registerReducer(...), registerRender(...)
 │                        at module load — no side effects beyond that
 ├── postprocess.js       optional (Phase 4+): cheerio transform for tex4npm's post stage
@@ -454,7 +458,11 @@ ximera-<name>/
 └── test/                spec examples as executable tests; consumes the conformance kit
 ```
 
-The `"latex"` field is what makes the package participate in the tex4npm build (see `ARCHITECTURE.md` → "The dual LaTeX + JS package convention"). Phase 4 adds `"postprocess"`; Phase 5 adds `"4ht"`.
+The `"latex"` field is what makes the package participate in the tex4npm build (see `ARCHITECTURE.md` → "The dual LaTeX + JS package convention"). Phase 4 adds `"postprocess"`; Phase 5 adds `"4ht"`, `"cls"`, and `"cfg"`.
+
+Each of `"sty"`, `"4ht"`, `"cls"`, `"cfg"` is a list of relative paths to TeX-searchable files that tex4npm symlinks into `.tex4npm/texmf/tex/latex/` before compilation. Filenames must be unique across all installed packages (tex4npm throws on collision). The `"cls"` and `"cfg"` fields are for LaTeX class files (`.cls`) and tex4ht config files (`.cfg`); in practice only `ximeraLatex` declares them. Packages without a JS entry point (no `main`/`exports`/`module`) are still valid — tex4npm skips the JS bundle import for them but still stages their TeX assets.
+
+This addition is **semver-minor** for tex4npm and **not part of the kernel contract**: a package that omits the fields is unaffected.
 
 ### 15.1 The `"postprocess"` hook (Phase 4, D5)
 
@@ -495,7 +503,7 @@ Cross-reference of the D-decisions from PLAN.md §2 to the sections that make th
 | D2 — Answerable registry | §6, §9 |
 | D3 — Blocking computed at runtime | §9 |
 | D4 — Generic projection + `registerRender` plugins | §8 |
-| D5 — tex4npm `"4ht"` + `"postprocess"` fields | §15 (deferred to Phase 4/5) |
+| D5 — tex4npm `"4ht"` + `"postprocess"` fields | §15 (Phase 4 for `"postprocess"`; Phase 5 for `"4ht"`, `"cls"`, `"cfg"`) |
 | D6 — Identity persistence, forward-tolerant reducers | §5, §11 |
 | D7 — Idempotent chrome, aria verbatim | §12 |
 | D8 — `math-expressions` equality | out of scope here; owned by `ximera-answer` spec |

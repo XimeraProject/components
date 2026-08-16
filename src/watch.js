@@ -23,12 +23,13 @@ function isWatchable(filePath, root) {
 export function watch(config, buildFn, { onBuild = () => {}, onError = console.error } = {}) {
   let running = false;
   let pending = false;
+  let packages = [];
 
   async function run(changedPath) {
     if (running) { pending = true; return; }
     running = true;
     try {
-      await runBuild(config, buildFn, changedPath, onBuild);
+      packages = await runBuild(config, buildFn, changedPath, onBuild, packages);
     } catch (err) {
       onError(err);
     } finally {
@@ -56,10 +57,10 @@ export function watch(config, buildFn, { onBuild = () => {}, onError = console.e
   return { close: () => watcher.close() };
 }
 
-async function runBuild(config, buildFn, changedPath, onBuild) {
+async function runBuild(config, buildFn, changedPath, onBuild, packages) {
   // Re-stage if a package.json changed (ximera packages may have been added/removed)
   if (!changedPath || changedPath.includes('node_modules')) {
-    await stage(config);
+    packages = await stage(config);
     await bundle(config);
   }
 
@@ -80,10 +81,11 @@ async function runBuild(config, buildFn, changedPath, onBuild) {
   const dirty = propagateDirty(graph, initialDirty);
   const toCompile = order.filter(f => dirty.has(f));
 
-  if (toCompile.length === 0) return;
+  if (toCompile.length === 0) return packages;
 
   onBuild(toCompile);
-  await buildFn(toCompile, config);
+  await buildFn(toCompile, config, packages);
+  return packages;
 }
 
 function toOutPath(texPath, root, outDir) {

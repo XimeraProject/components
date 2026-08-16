@@ -27,11 +27,16 @@ export async function findLatexPackages(root) {
       continue;
     }
     if (!pkg.latex) continue;
+    // "postprocess" may be a single relative path or an array; normalize to array.
+    // Modules are loaded and executed by postprocess.js (Phase 4, D5).
+    const rawPost = pkg.latex.postprocess;
+    const postprocess = Array.isArray(rawPost) ? rawPost : (rawPost ? [rawPost] : []);
     packages.push({
       name: pkg.name,
       dir: path.dirname(manifestPath),
       sty: pkg.latex.sty ?? [],
       css: pkg.latex.css ?? [],
+      postprocess,
     });
   }
 

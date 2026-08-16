@@ -1,11 +1,19 @@
 import { readFile, writeFile } from 'fs/promises';
 import { load } from 'cheerio';
+import { pathToFileURL } from 'url';
 import path from 'path';
 import { hashFile } from './dirty.js';
 
 // Run all post-processing steps on an HTML file already copied to outDir.
-// Modifies the file in place.
-export async function postprocess(htmlPath, flsInputs, projectRoot, outDir, { xmjaxPath, xmcssPath } = {}) {
+// Modifies the file in place. Component-specific transforms (extracting
+// \answer blanks, MathJax extensions, blocking-problem detection) moved to
+// their owning component packages in Phase 4 (D3, D5); tex4npm now runs
+// only generic HTML shaping and dispatches to registered package hooks.
+export async function postprocess(htmlPath, flsInputs, projectRoot, outDir, {
+  xmjaxPath,
+  xmcssPath,
+  packages = [],
+} = {}) {
   const $ = load(await readFile(htmlPath, 'utf8'));
 
   removeEmptyParas($);
@@ -13,8 +21,19 @@ export async function postprocess(htmlPath, flsInputs, projectRoot, outDir, { xm
   if (xmjaxPath) await injectXmjax($, xmjaxPath);
   if (xmcssPath) await injectXmcss($, xmcssPath);
   stripOldXimeraScripts($);
-  extractAnswerBlanks($);
-  markBlockingProblems($);
+
+  // Package-provided postprocess hooks (Phase 4, D5). Each hook is an ES
+  // module whose default export is `async ($, ctx) => void`. Hooks run in
+  // package-discovery order; ordering guarantees between hooks are not part
+  // of the contract, so hooks MUST be independent.
+  const ctx = { htmlPath, projectRoot, outDir };
+  for (const pkg of packages) {
+    for (const rel of pkg.postprocess ?? []) {
+      const mod = await import(pathToFileURL(path.join(pkg.dir, rel)).href);
+      await mod.default($, ctx);
+    }
+  }
+
   injectBundleRefs($, htmlPath, outDir);
 
   if (isXourse($)) {
@@ -110,70 +129,11 @@ export async function injectXmcss($, xmcssPath) {
   $('div.preamble').append(`<style type="text/css">\n${css}\n</style>`);
 }
 
-// Find \answer{VALUE} patterns inside <span class="mathjax-inline"> elements.
-// tex4ht's mathjax mode passes the entire math expression as raw LaTeX, so
-// \answer never gets converted to HTML by tex4ht. We extract the correct-answer
-// value here and insert a <span class="answer respondable"> after the math span.
-// The \answer call is replaced with \square so MathJax shows a visible placeholder.
-export function extractAnswerBlanks($) {
-  const ANSWER_RE = /\\answer\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}/g;
-  let counter = 0;
-
-  $('span.mathjax-inline').each((_, el) => {
-    const $el = $(el);
-    let html = $el.html();
-    const matches = [...html.matchAll(ANSWER_RE)];
-    if (matches.length === 0) return;
-
-    // Walk matches in reverse so slice indices stay valid as we replace
-    const toInsert = [];
-    for (let i = matches.length - 1; i >= 0; i--) {
-      const m = matches[i];
-      const correctText = m[1].trim();
-      const answerId = `ximera-answer-${++counter}`;
-      html = html.slice(0, m.index) + '\\square' + html.slice(m.index + m[0].length);
-      toInsert.unshift({ answerId, correctText });
-    }
-    $el.html(html);
-
-    // Insert respondable spans immediately after the math span, in order
-    let $anchor = $el;
-    for (const { answerId, correctText } of toInsert) {
-      const $span = $(`<span class="answer respondable" id="${answerId}" data-correct-text="${correctText.replace(/"/g, '&quot;')}"></span>`);
-      $anchor.after($span);
-      $anchor = $span;
-    }
-  });
-}
-
 // Remove the old ximera.osu.edu CDN <script> and <link> tags injected by ximera.cfg.
 // These belong to the old jQuery/xake system; the new ximera.js bundle replaces them.
 export function stripOldXimeraScripts($) {
   $('link[href*="ximera.osu.edu"]').remove();
   $('script[src*="ximera.osu.edu"]').remove();
-}
-
-// Add data-blocking="" to every .problem-environment that directly contains at
-// least one answerable (.answer.respondable, .multiple-choice, .select-all).
-// Top-level problems (no .problem-environment ancestor) are left without the
-// attribute so the runtime treats them as available from the start.
-export function markBlockingProblems($) {
-  // Process innermost problems first (reverse document order) so that a parent
-  // problem's answerables include any that were already marked in children.
-  const problems = $('div.problem-environment').toArray().reverse();
-  for (const el of problems) {
-    const $el = $(el);
-    // "Direct" answerables: not nested inside a child .problem-environment
-    const hasAnswerable = (
-      $el.find('.answer.respondable').filter((_, a) =>
-        $(a).closest('.problem-environment').is(el)
-      ).length > 0 ||
-      $el.find('.multiple-choice, .select-all').filter((_, mc) =>
-        $(mc).closest('.problem-environment').is(el)
-      ).length > 0
-    );
-    if (hasAnswerable) $el.attr('data-blocking', '');
-  }
 }
 
 // Inject <link> and <script defer> tags pointing to the ximera.js/css bundle.

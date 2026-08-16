@@ -21,7 +21,7 @@ function toOutPath(texPath, root, outDir) {
 
 // Compile one file: throttle only the execa subprocess calls through the queue;
 // artifact copy and HTML post-processing run immediately after, outside the queue.
-async function compileFile(texPath, config, queue) {
+async function compileFile(texPath, config, queue, packages) {
   // tex4htFiles: files written by the tex4ht binary (html, tmp, etc.)
   const tex4htFiles = await queue.add(() => compile(texPath, config));
 
@@ -48,6 +48,7 @@ async function compileFile(texPath, config, queue) {
     await postprocess(htmlOut, inputs, config.root, config.outDir, {
       xmjaxPath: path.join(dir, `${stem}.xmjax`),
       xmcssPath: path.join(dir, `${stem}.xmcss`),
+      packages,
     });
   }
 
@@ -57,13 +58,13 @@ async function compileFile(texPath, config, queue) {
 // Compile a batch of .tex files with concurrency capped at config.workers.
 // Errors are collected and returned; compilation of other files continues.
 // Used by both `build` and `watch`.
-export async function compileBatch(texFiles, config) {
+export async function compileBatch(texFiles, config, packages = []) {
   const queue = new PQueue({ concurrency: config.workers });
   const errors = [];
 
   await Promise.all(texFiles.map(async texPath => {
     try {
-      await compileFile(texPath, config, queue);
+      await compileFile(texPath, config, queue, packages);
       console.log(`  ✓ ${path.relative(config.root, texPath)}`);
     } catch (err) {
       errors.push({ file: texPath, err });
@@ -75,7 +76,7 @@ export async function compileBatch(texFiles, config) {
 }
 
 async function runBuild(config) {
-  await stage(config);
+  const packages = await stage(config);
   await bundle(config);
 
   const texFiles = await discover(config.root, { exclude: config.exclude });
@@ -100,7 +101,7 @@ async function runBuild(config) {
   }
 
   console.log(`Compiling ${toCompile.length} file(s)...`);
-  const errors = await compileBatch(toCompile, config);
+  const errors = await compileBatch(toCompile, config, packages);
   if (errors.length > 0) process.exit(1);
 }
 

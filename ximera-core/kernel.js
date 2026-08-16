@@ -10,5 +10,5 @@
 
 export { register } from './mounts.js';
 export { registerReducer } from './update.js';
-export { registerRender } from './render.js';
-export { dispatch, boot } from './boot.js';
+export { registerRender, focusGuardSyncValue } from './render.js';
+export { dispatch, readModel, boot } from './boot.js';

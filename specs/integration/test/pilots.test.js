@@ -190,9 +190,9 @@ test('my-course sample: hints + word-choice on the same page, together', async (
     assert.equal(model[problem.id].complete, true);
   }
 
-  // Progress: my-course/sample.tex has THREE top-level problems (the two
-  // \answer problems have their own problem-envs). Only one is complete, so
-  // progress is 1/3.
-  assert.equal(Math.abs(agent.lastProgress - 1 / 3) < 1e-9, true,
-    `expected ~1/3, got ${agent.lastProgress}`);
+  // Progress: my-course/sample.tex has FIVE top-level problems (Phase 3
+  // added multiple-choice, select-all, free-response demos). Only one is
+  // complete, so progress is 1/5.
+  assert.equal(Math.abs(agent.lastProgress - 1 / 5) < 1e-9, true,
+    `expected ~1/5, got ${agent.lastProgress}`);
 });

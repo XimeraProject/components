@@ -7,8 +7,12 @@
   "dependencies": {
     "my-button": "*",
     "tex4npm": "*",
+    "ximera-choice-util": "*",
     "ximera-core": "*",
+    "ximera-free-response": "*",
     "ximera-hint": "*",
+    "ximera-multiple-choice": "*",
+    "ximera-select-all": "*",
     "ximera-word-choice": "*"
   },
   "type": "module"

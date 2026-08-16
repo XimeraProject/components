@@ -7,7 +7,7 @@
 \begin{document}
 
 \begin{abstract}
-Testing the Phase~2 pilots: \texttt{ximera-hint} and \texttt{ximera-word-choice}, alongside legacy \texttt{\textbackslash answer} and \texttt{\textbackslash button}.
+Demonstration of every v1 pilot: \texttt{ximera-hint}, \texttt{ximera-word-choice}, \texttt{ximera-multiple-choice}, \texttt{ximera-select-all}, \texttt{ximera-free-response}, and the still-legacy \texttt{\textbackslash answer}. Feedback works out of the box via the kernel.
 \end{abstract}
 
 \maketitle
@@ -26,7 +26,7 @@ Testing the Phase~2 pilots: \texttt{ximera-hint} and \texttt{ximera-word-choice}
   \end{feedback}
 
   \begin{hint}
-    It's the smallest prime number that is neither a Fermat prime nor a Mersenne prime.
+    It's the smallest prime that is neither a Fermat prime nor a Mersenne prime.
   \end{hint}
 
   \begin{hint}
@@ -43,10 +43,31 @@ Testing the Phase~2 pilots: \texttt{ximera-hint} and \texttt{ximera-word-choice}
 \end{problem}
 
 \begin{problem}
-  Find two integers which sum to twenty five, or rather
-  \[
-  \sqrt{\answer{16}} = 4 = \frac{8}{\answer{2}}.
-  \]
+  Which of these is prime?
+  \begin{multipleChoice}
+    \choice{4}
+    \choice{6}
+    \choice[correct]{7}
+    \choice{9}
+  \end{multipleChoice}
+\end{problem}
+
+\begin{problem}
+  Which of these are even numbers?
+  \begin{selectAll}
+    \choice[correct]{2}
+    \choice{3}
+    \choice[correct]{4}
+    \choice{5}
+    \choice[correct]{6}
+  \end{selectAll}
+\end{problem}
+
+\begin{problem}
+  In your own words, describe why the sum of two odd numbers is always even.
+  \begin{freeResponse}
+    Write your explanation here.
+  \end{freeResponse}
 \end{problem}
 
 \end{document}

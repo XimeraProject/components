@@ -1,0 +1,22 @@
+{
+  "name": "ximera-multiple-choice",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "index.js",
+  "latex": {
+    "css": ["ximera-multiple-choice.css"]
+  },
+  "scripts": {
+    "test": "node --test 'test/**/*.test.js'"
+  },
+  "peerDependencies": {
+    "ximera-core": "*"
+  },
+  "dependencies": {
+    "ximera-choice-util": "*"
+  },
+  "devDependencies": {
+    "happy-dom": "^15.0.0",
+    "ximera-core": "*"
+  }
+}

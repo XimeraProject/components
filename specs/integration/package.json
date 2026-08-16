@@ -8,8 +8,12 @@
   "devDependencies": {
     "happy-dom": "^15.0.0",
     "tex4npm": "*",
+    "ximera-choice-util": "*",
     "ximera-core": "*",
+    "ximera-free-response": "*",
     "ximera-hint": "*",
+    "ximera-multiple-choice": "*",
+    "ximera-select-all": "*",
     "ximera-word-choice": "*"
   }
 }

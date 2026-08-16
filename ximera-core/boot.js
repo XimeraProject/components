@@ -11,6 +11,14 @@ let model = initialModel();
 let agentRef = null;
 let bootedOnce = false;
 
+// readModel: read-only snapshot of the current model. Consumers MUST NOT
+// mutate; JavaScript can't enforce it, so treat the returned object as
+// frozen. Useful in mount functions that need to consult persisted state
+// (e.g. reading a shuffle seed that survived a reload) before dispatching.
+export function readModel() {
+  return model;
+}
+
 // dispatch: the only way to change the model. Runs the reducer, re-renders
 // changed entries, persists via the agent.
 export function dispatch(msg) {

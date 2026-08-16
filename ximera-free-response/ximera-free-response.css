@@ -1,0 +1,45 @@
+/* ximera-free-response — ungraded prose response. */
+
+.free-response {
+  margin: 0.8em 0;
+}
+
+.free-response textarea.ximera-free-response-input {
+  display: block;
+  width: 100%;
+  min-height: 6em;
+  padding: 0.5em;
+  font-size: inherit;
+  font-family: inherit;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.free-response textarea.ximera-free-response-input:focus {
+  outline: none;
+  border-color: #4a90d9;
+  box-shadow: 0 0 0 2px rgba(74, 144, 217, 0.25);
+}
+
+.free-response[data-state="submitted"] textarea.ximera-free-response-input {
+  background: #f0fff0;
+  border-color: #2a7a2a;
+}
+
+.free-response .ximera-submit-btn {
+  margin-top: 0.4em;
+  padding: 0.35em 0.9em;
+  border: 1px solid #2196f3;
+  border-radius: 4px;
+  background: #2196f3;
+  color: #fff;
+  cursor: pointer;
+}
+
+.free-response .ximera-submit-btn:disabled {
+  background: #b0d0f0;
+  border-color: #b0d0f0;
+  cursor: default;
+}

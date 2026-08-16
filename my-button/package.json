@@ -1,9 +1,20 @@
 {
   "name": "my-button",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "main": "index.js",
   "latex": {
-    "sty": ["my-button.sty"]
+    "sty": ["my-button.sty"],
+    "4ht": ["my-button.4ht"]
+  },
+  "scripts": {
+    "test": "node --test 'test/**/*.test.js'"
+  },
+  "peerDependencies": {
+    "ximera-core": "*"
+  },
+  "devDependencies": {
+    "happy-dom": "^15.0.0",
+    "ximera-core": "*"
   }
 }

@@ -1,11 +1,16 @@
-\ProvidesPackage{button}[2025/05/26 \button{} command for Ximera]
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{my-button}[2026/08/16 v0.2 Graded click-counter button for Ximera]
 
-% PDF mode: draw a box around the text.
-\newcommand{\button}[1]{\fbox{#1}}
+\RequirePackage{xkeyval}
 
-% HTML mode (tex4ht): emit a native <button> element.
-\ifdefined\HCode
-  \renewcommand{\button}[1]{%
-    \HCode{<button>}#1\HCode{</button>}%
-  }
-\fi
+\define@key{button}{count}{\def\btn@count{#1}}
+\setkeys{button}{count=1}
+
+% PDF mode: draw a box around the label. The count is meaningless on paper.
+\newcommand{\button}[2][]{%
+  \setkeys{button}{#1}%
+  \fbox{#2}%
+}
+
+\ifdefined\HCode\input{my-button.4ht}\fi
+\endinput

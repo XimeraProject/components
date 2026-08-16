@@ -163,7 +163,7 @@ test('my-course sample: full v1 pilot roster interoperates on one page', async (
   for (const pkg of [
     'ximera-hint', 'ximera-word-choice',
     'ximera-multiple-choice', 'ximera-select-all', 'ximera-free-response',
-    'ximera-answer',
+    'ximera-answer', 'my-button',
   ]) {
     modules[pkg] = await reloadComponent(pkg);
   }
@@ -182,12 +182,12 @@ test('my-course sample: full v1 pilot roster interoperates on one page', async (
   const { agent } = await mountFixture(body);
   await modules['ximera-answer'].mountReady();
 
-  // Six top-level problems in sample.tex: integer answer, float answer,
-  // word-choice, multiple-choice, select-all, free-response. All top-level
-  // → available.
+  // Seven top-level problems in sample.tex: graded button, integer answer,
+  // float answer, word-choice, multiple-choice, select-all, free-response.
+  // All top-level → available.
   const topProblems = [...document.querySelectorAll('.problem-environment')]
     .filter((p) => !p.parentElement?.closest('.problem-environment'));
-  assert.equal(topProblems.length, 6);
+  assert.equal(topProblems.length, 7);
   for (const p of topProblems) assert.ok(p.dataset.state.split(/\s+/).includes('available'));
 
   // Complete both \answer problems.
@@ -227,6 +227,13 @@ test('my-course sample: full v1 pilot roster interoperates on one page', async (
   ta.value = 'my thoughtful answer';
   ta.dispatchEvent(new window.Event('input', { bubbles: true }));
   fr.querySelector('.ximera-submit-btn').click();
+
+  // Complete the graded my-button problem (three clicks; the top-level
+  // <button class="ximera-button"> outside any problem doesn't count).
+  const gradedBtn = [...document.querySelectorAll('.ximera-button')].find(
+    (b) => b.closest('.problem-environment')
+  );
+  gradedBtn.click(); gradedBtn.click(); gradedBtn.click();
 
   // Every top-level problem is now complete → progress = 1.
   assert.ok(Math.abs(agent.lastProgress - 1) < 1e-9, `expected 1, got ${agent.lastProgress}`);

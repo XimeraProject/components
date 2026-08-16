@@ -1,0 +1,20 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{multiple-choice}[2026/08/16 v0.1 Ximera multipleChoice environment (greenfield)]
+
+\RequirePackage{choice-util}
+
+\newenvironment{multipleChoice}[1][]
+	{%
+	\setkeys{multipleChoice}{#1}%
+	\recordvariable{\mc@id}%
+	\begin{trivlist}
+		\item[\hskip \labelsep\small\bfseries \GetTranslation{Multiple Choice}:]\hfil
+		\begin{enumerate}
+	}%
+	{%
+		\end{enumerate}
+	\end{trivlist}
+	}
+
+\ifdefined\HCode\input{multiple-choice.4ht}\fi
+\endinput

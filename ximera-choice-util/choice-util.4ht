@@ -1,0 +1,17 @@
+% choice-util.4ht — tex4ht hooks for shared choice macros.
+% Loaded from choice-util.sty inside \ifdefined\HCode.
+
+\newcounter{choiceId}
+\renewcommand{\choice}[2][]{%
+\setkeys{choice}{correct=false}%
+\setkeys{choice}{#1}%
+\stepcounter{choiceId}\IgnorePar%
+\HCode{<span class="choice }%
+\ifthenelse{\boolean{\choice@correct}}{\HCode{correct}}{}
+\HCode{" }
+\ifthenelse{\equal{\choice@value}{}}{}{\HCode{data-value="\choice@value" }}
+\HCode{id="choice\arabic{choiceId}">}%
+#2\HCode{</span>}}
+\let\inlinechoice\choice
+
+\endinput

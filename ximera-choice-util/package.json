@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "type": "module",
   "main": "index.js",
+  "latex": {
+    "sty": ["choice-util.sty"],
+    "4ht": ["choice-util.4ht"]
+  },
   "scripts": {
     "test": "node --test 'test/**/*.test.js'"
   }

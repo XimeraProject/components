@@ -4,6 +4,8 @@
   "type": "module",
   "main": "index.js",
   "latex": {
+    "sty": ["free-response.sty"],
+    "4ht": ["free-response.4ht"],
     "css": ["ximera-free-response.css"]
   },
   "scripts": {

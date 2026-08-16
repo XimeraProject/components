@@ -1,0 +1,6 @@
+% word-choice.4ht — tex4ht hooks for the word-choice package.
+
+\renewenvironment{multipleChoice@}{\refstepcounter{problem}}{}%
+\ConfigureEnv{multipleChoice@}{\stepcounter{identification}\IgnorePar\HCode{<span class="word-choice" id="word-choice\arabic{identification}">}}{\HCode{</span>}\IgnoreIndent}{}{}
+
+\endinput

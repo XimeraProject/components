@@ -1,0 +1,11 @@
+% multiple-choice.4ht — tex4ht hooks for the multiple-choice package.
+
+\renewenvironment{multipleChoice}[1][]
+{\setkeys{multipleChoice}{#1}%
+\stepcounter{identification}\ifvmode \IgnorePar\fi \EndP\HCode{<div class="multiple-choice" }%
+\ifthenelse{\equal{\mc@id}{}}{}{\HCode{data-id="\mc@id" }}%
+\HCode{id="problem\arabic{identification}" titletext=" \GetTranslation{Multiple Choice}">}%
+}{\HCode{</div>}\IgnoreIndent}
+\ConfigureEnv{multipleChoice}{}{}{}{}
+
+\endinput

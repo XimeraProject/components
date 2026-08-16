@@ -4,6 +4,8 @@
   "type": "module",
   "main": "index.js",
   "latex": {
+    "sty": ["word-choice.sty"],
+    "4ht": ["word-choice.4ht"],
     "css": ["ximera-word-choice.css"]
   },
   "scripts": {
@@ -11,6 +13,9 @@
   },
   "peerDependencies": {
     "ximera-core": "*"
+  },
+  "dependencies": {
+    "ximera-choice-util": "*"
   },
   "devDependencies": {
     "happy-dom": "^15.0.0",

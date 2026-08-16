@@ -1,0 +1,39 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{hint}[2026/08/16 v0.1 Ximera hint environment (greenfield)]
+
+\newcounter{hintLevel}
+\setcounter{hintLevel}{0}
+
+\newenvironment{hint}{}{}
+
+\renewenvironment{hint}
+{
+	\ifhandout
+		\setbox0\vbox\bgroup
+	\else
+		\begin{trivlist}\item[\hskip \labelsep\small\slshape\bfseries \GetTranslation{Hint}:\hspace{2ex}]
+		\small\slshape
+	\fi
+	\stepcounter{hintLevel}
+}
+{
+	\ifhandout
+		\egroup\ignorespacesafterend
+	\else
+		\end{trivlist}
+	\fi
+	\addtocounter{hintLevel}{-1}
+}
+
+\ifhints
+	\renewenvironment{hint}{
+		\begin{trivlist}\item[\hskip \labelsep\small\slshape\bfseries \GetTranslation{Hint}:\hspace{2ex}]
+	\small\slshape
+	}
+	{
+		\end{trivlist}
+	}
+\fi
+
+\ifdefined\HCode\input{hint.4ht}\fi
+\endinput

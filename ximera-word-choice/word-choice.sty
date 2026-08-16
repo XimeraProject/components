@@ -1,0 +1,23 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{word-choice}[2026/08/16 v0.1 Ximera wordChoice command (greenfield)]
+
+\RequirePackage{choice-util}
+
+\newenvironment{multipleChoice@}[1][]{}{)}
+
+\newcommand{\wordChoice}[1]{%
+\let\choicetemp\choice%
+\ifwordchoicegiven%
+\let\choice\otherchoice%
+#1
+\else%
+\let\choice\inlinechoice%
+\begin{multipleChoice@}%
+#1%
+\end{multipleChoice@}%
+\fi%
+\let\choice\choicetemp%
+}%
+
+\ifdefined\HCode\input{word-choice.4ht}\fi
+\endinput

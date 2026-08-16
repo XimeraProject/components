@@ -1,0 +1,12 @@
+% hint.4ht — tex4ht hooks for the hint package.
+% Loaded from hint.sty inside \ifdefined\HCode.
+
+\ifdefined\xmNotHintAsExpandable\else
+\RenewEnviron{hint}{%
+ \begin{expandable}{xmhint}{}%
+   \BODY%
+ \end{expandable}%
+}
+\fi
+
+\endinput

@@ -4,6 +4,8 @@
   "type": "module",
   "main": "index.js",
   "latex": {
+    "sty": ["multiple-choice.sty"],
+    "4ht": ["multiple-choice.4ht"],
     "css": ["ximera-multiple-choice.css"]
   },
   "scripts": {

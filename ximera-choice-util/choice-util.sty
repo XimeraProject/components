@@ -1,0 +1,74 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{choice-util}[2026/08/16 v0.1 Ximera shared \choice / \otherchoice / \inlinechoice macros (greenfield)]
+
+\RequirePackage{xkeyval}
+\RequirePackage{ifthen}
+
+\define@key{choice}{value}[]{\def\choice@value{#1}}
+\define@boolkey{choice}{correct}[true]{\def\choice@correct{#1}}
+
+\define@key{multipleChoice}{id}{\def\mc@id{#1}}
+
+\define@key{otherchoice}{value}[]{\def\otherchoice@value{#1}}
+\define@boolkey{otherchoice}{correct}[true]{\def\otherchoice@correct{#1}}
+
+\setkeys{choice}{correct=false,value=}
+\setkeys{multipleChoice}{id=}
+\setkeys{otherchoice}{correct=false,value=}
+
+\newcommand{\choice}[2][]{%
+\setkeys{choice}{#1}%
+\item{#2}
+\ifthenelse{\boolean{\choice@correct}}
+    {%
+    \ifhandout%
+    \else%
+        \,\checkmark\,\setkeys{choice}{correct=false}
+    \fi
+    }%
+    {}%
+}
+
+\newcommand{\choiceEXP}[2][]{%
+	\expandafter\setkeys\expandafter{choice}{#1}%
+	\item{#2}
+	\ifthenelse{\boolean{\choice@correct}}
+		{%
+		\ifhandout
+		\else
+			\,\checkmark\,\setkeys{choice}{correct=false}
+		\fi
+		}%
+		{}%
+	}
+
+\newcommand{\otherchoice}[2][]{%
+\ignorespaces%
+\setkeys{otherchoice}{#1}%
+\ifthenelse{\boolean{\otherchoice@correct}}%
+{%
+#2\ignorespaces\setkeys{otherchoice}{correct=false}\ignorespaces%
+}%
+{}%
+\ignorespaces%
+}%
+
+\newcommand{\inlinechoice}[2][]{%
+\setkeys{choice}{#1}%
+\iffirstinlinechoice
+(\hspace{-.25em}
+\firstinlinechoicefalse
+\else
+/
+\fi
+#2
+\ifthenelse{\boolean{\choice@correct}}%
+{%
+\ifhandout\else\checkmark\ignorespaces\setkeys{choice}{correct=false}\ignorespaces\fi%
+}%
+{}%
+\hspace{-.25em}\ignorespaces%
+}
+
+\ifdefined\HCode\input{choice-util.4ht}\fi
+\endinput

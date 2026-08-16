@@ -8,7 +8,13 @@
   "dependencies": {
     "tex4npm": "*",
     "ximera-answer": "*",
+    "ximera-choice-util": "*",
     "ximera-core": "*",
+    "ximera-free-response": "*",
+    "ximera-hint": "*",
+    "ximera-multiple-choice": "*",
+    "ximera-select-all": "*",
+    "ximera-word-choice": "*",
     "ximeralatex": "*"
   },
   "type": "module"

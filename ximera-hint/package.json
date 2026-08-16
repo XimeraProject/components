@@ -4,6 +4,8 @@
   "type": "module",
   "main": "index.js",
   "latex": {
+    "sty": ["hint.sty"],
+    "4ht": ["hint.4ht"],
     "css": ["ximera-hint.css"]
   },
   "scripts": {

@@ -35,7 +35,11 @@ export async function findLatexPackages(root) {
       name: pkg.name,
       dir: path.dirname(manifestPath),
       sty: pkg.latex.sty ?? [],
+      fourht: pkg.latex['4ht'] ?? [],
+      cls: pkg.latex.cls ?? [],
+      cfg: pkg.latex.cfg ?? [],
       css: pkg.latex.css ?? [],
+      hasJs: Boolean(pkg.main ?? pkg.exports ?? pkg.module),
       postprocess,
     });
   }
@@ -43,8 +47,8 @@ export async function findLatexPackages(root) {
   return packages;
 }
 
-// Stage 2: wipe .tex4npm/texmf/tex/latex/ and repopulate with links to .sty files.
-// Throws on filename collision between two packages.
+// Stage 2: wipe .tex4npm/texmf/tex/latex/ and repopulate with links to
+// TeX assets (.sty, .4ht, .cls, .cfg). Throws on filename collision.
 export async function populateTexmf(tex4npmTexmf, packages) {
   const latexDir = path.join(tex4npmTexmf, 'tex', 'latex');
   await rm(latexDir, { recursive: true, force: true });
@@ -53,13 +57,13 @@ export async function populateTexmf(tex4npmTexmf, packages) {
   const seen = new Map(); // basename → package name
 
   for (const pkg of packages) {
-    for (const styRel of pkg.sty) {
-      const src = path.resolve(pkg.dir, styRel);
-      const basename = path.basename(styRel);
+    for (const rel of [...pkg.sty, ...pkg.fourht, ...pkg.cls, ...pkg.cfg]) {
+      const src = path.resolve(pkg.dir, rel);
+      const basename = path.basename(rel);
 
       if (seen.has(basename)) {
         throw new Error(
-          `.sty filename collision: ${basename} is declared by both ` +
+          `latex filename collision: ${basename} is declared by both ` +
           `${seen.get(basename)} and ${pkg.name}`
         );
       }
@@ -74,7 +78,9 @@ export async function populateTexmf(tex4npmTexmf, packages) {
 export async function generateBundleEntry(tex4npmDir, packages) {
   await mkdir(tex4npmDir, { recursive: true });
 
-  const jsImports = packages.map(p => `import ${JSON.stringify(p.name)};`);
+  const jsImports = packages
+    .filter(p => p.hasJs !== false)
+    .map(p => `import ${JSON.stringify(p.name)};`);
   const cssImports = packages.flatMap(p =>
     p.css.map(rel => `import ${JSON.stringify(p.name + '/' + rel)};`)
   );

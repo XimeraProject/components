@@ -52,6 +52,48 @@ describe('findLatexPackages', () => {
     assert.deepEqual(foo.sty, ['foo.sty']);
     assert.deepEqual(foo.css, ['dist/foo.css']);
   });
+
+  it('defaults the 4ht array to [] when not declared', async () => {
+    const pkgs = await findLatexPackages(root);
+    const foo = pkgs.find(p => p.name === 'ximera-foo');
+    assert.deepEqual(foo.fourht, []);
+  });
+
+  it('exposes the 4ht array when declared', async () => {
+    const r = await makeRoot([
+      ['ximera-baz', { latex: { sty: ['baz.sty'], '4ht': ['baz.4ht'] } },
+        { 'baz.sty': '', 'baz.4ht': '' }],
+    ]);
+    try {
+      const pkgs = await findLatexPackages(r);
+      const baz = pkgs.find(p => p.name === 'ximera-baz');
+      assert.deepEqual(baz.fourht, ['baz.4ht']);
+    } finally {
+      await rm(r, { recursive: true, force: true });
+    }
+  });
+
+  it('defaults cls and cfg arrays to [] when not declared', async () => {
+    const pkgs = await findLatexPackages(root);
+    const foo = pkgs.find(p => p.name === 'ximera-foo');
+    assert.deepEqual(foo.cls, []);
+    assert.deepEqual(foo.cfg, []);
+  });
+
+  it('exposes cls and cfg arrays when declared', async () => {
+    const r = await makeRoot([
+      ['ximeralatex', { latex: { cls: ['foo.cls'], cfg: ['foo.cfg'] } },
+        { 'foo.cls': '', 'foo.cfg': '' }],
+    ]);
+    try {
+      const pkgs = await findLatexPackages(r);
+      const xl = pkgs.find(p => p.name === 'ximeralatex');
+      assert.deepEqual(xl.cls, ['foo.cls']);
+      assert.deepEqual(xl.cfg, ['foo.cfg']);
+    } finally {
+      await rm(r, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('populateTexmf', () => {
@@ -96,6 +138,56 @@ describe('populateTexmf', () => {
       await rm(collRoot, { recursive: true, force: true });
     }
   });
+
+  it('symlinks .4ht files alongside .sty files', async () => {
+    const r = await makeRoot([
+      ['ximera-baz', { latex: { sty: ['baz.sty'], '4ht': ['baz.4ht'] } },
+        { 'baz.sty': '', 'baz.4ht': '' }],
+    ]);
+    try {
+      const pkgs = await findLatexPackages(r);
+      await populateTexmf(path.join(r, '.tex4npm', 'texmf'), pkgs);
+      const dest = path.join(r, '.tex4npm', 'texmf', 'tex', 'latex', 'baz.4ht');
+      const stat = await lstat(dest);
+      assert.ok(stat.isSymbolicLink() || stat.isFile());
+    } finally {
+      await rm(r, { recursive: true, force: true });
+    }
+  });
+
+  it('throws on .4ht filename collision across packages', async () => {
+    const collRoot = await makeRoot([
+      ['ximera-a', { latex: { '4ht': ['shared.4ht'] } }, { 'shared.4ht': '' }],
+      ['ximera-b', { latex: { '4ht': ['shared.4ht'] } }, { 'shared.4ht': '' }],
+    ]);
+    try {
+      const pkgs = await findLatexPackages(collRoot);
+      await assert.rejects(
+        () => populateTexmf(path.join(collRoot, '.tex4npm', 'texmf'), pkgs),
+        /collision/
+      );
+    } finally {
+      await rm(collRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('symlinks .cls and .cfg files alongside .sty/.4ht', async () => {
+    const r = await makeRoot([
+      ['ximeralatex', { latex: { cls: ['ximera.cls'], cfg: ['ximera.cfg'] } },
+        { 'ximera.cls': '', 'ximera.cfg': '' }],
+    ]);
+    try {
+      const pkgs = await findLatexPackages(r);
+      await populateTexmf(path.join(r, '.tex4npm', 'texmf'), pkgs);
+      for (const name of ['ximera.cls', 'ximera.cfg']) {
+        const dest = path.join(r, '.tex4npm', 'texmf', 'tex', 'latex', name);
+        const stat = await lstat(dest);
+        assert.ok(stat.isSymbolicLink() || stat.isFile());
+      }
+    } finally {
+      await rm(r, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('generateBundleEntry', () => {
@@ -124,14 +216,25 @@ describe('generateBundleEntry', () => {
     const content = await readFile(path.join(tex4npmDir, 'bundle-entry.js'), 'utf8');
     assert.ok(content.startsWith('// auto-generated'));
   });
+
+  it('omits the JS import for latex-only packages (hasJs=false)', async () => {
+    const packages = [
+      { name: 'ximera-foo', sty: [], css: [], hasJs: true },
+      { name: 'ximeralatex', sty: [], css: [], hasJs: false },
+    ];
+    await generateBundleEntry(tex4npmDir, packages);
+    const content = await readFile(path.join(tex4npmDir, 'bundle-entry.js'), 'utf8');
+    assert.ok(content.includes(`import "ximera-foo";`));
+    assert.ok(!content.includes(`import "ximeralatex";`));
+  });
 });
 
 describe('stage (integration)', () => {
   let root;
   before(async () => {
     root = await makeRoot([
-      ['ximera-foo', { latex: { sty: ['foo.sty'], css: ['dist/foo.css'] } },
-        { 'foo.sty': '', 'dist/foo.css': '' }],
+      ['ximera-foo', { main: 'index.js', latex: { sty: ['foo.sty'], css: ['dist/foo.css'] } },
+        { 'foo.sty': '', 'dist/foo.css': '', 'index.js': '' }],
     ]);
   });
   after(() => rm(root, { recursive: true, force: true }));

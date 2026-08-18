@@ -69,46 +69,55 @@
      `body { --ximera-content-width: 60em; }` for wider layouts. */
   --ximera-content-width: 42em;
 
-  /* Body font — MathJax_Main is the identical webfont MathJax uses to
-     render text inside math expressions (`\text{...}`, operator names,
-     etc.), served from the same CDN as MathJax itself. Putting it
-     first in the stack guarantees an exact visual match: the "x" in a
-     sentence looks the same as the "x" in an equation. Fallbacks pick
-     up any glyphs MathJax_Main doesn't cover (extended Latin,
-     accented characters) and cover the case where the CDN is
-     unreachable — in that case we still render in a MathJax-lookalike
-     serif. The @font-face declarations below source the actual font
-     files. */
+  /* Body font — MathJax_NewCM points at the *same* woff2 files that
+     MathJax 4's CHTML output uses for text inside math expressions
+     (`\text{...}`, operator names, roman glyphs). Putting it first in
+     the stack guarantees an exact visual match: the "x" in a sentence
+     looks the same as the "x" in an equation. Fallbacks pick up any
+     glyphs MathJax_NewCM doesn't cover and are all Computer-Modern-
+     family faces so the page still reads Modern-ish if the CDN is
+     unreachable. The @font-face declarations below source the actual
+     font files. Bumping MathJax from 3 to 4 was the trigger for
+     switching families: v4's default font is mathjax-newcm (New
+     Computer Modern), not the classic MathJax_Main. */
   --ximera-font-serif:
-    "MathJax_Main",
+    "MathJax_NewCM",
     "Latin Modern Roman", "LMRoman10-Regular",
-    "STIX Two Text", "STIXGeneral",
     "Computer Modern Serif", "CMU Serif",
+    "STIX Two Text", "STIXGeneral",
     Georgia, "Times New Roman", Times, serif;
 }
 
-/* ─── MathJax_Main webfont — served from MathJax's own CDN ──────────────── */
+/* ─── MathJax_NewCM webfont — same woff2 files MathJax 4 CHTML loads ─────── */
 
 @font-face {
-  font-family: 'MathJax_Main';
-  src: url('https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Regular.woff') format('woff');
+  font-family: 'MathJax_NewCM';
+  src: url('https://cdn.jsdelivr.net/npm/@mathjax/mathjax-newcm-font/chtml/woff2/mjx-ncm-n.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'MathJax_Main';
-  src: url('https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Bold.woff') format('woff');
+  font-family: 'MathJax_NewCM';
+  src: url('https://cdn.jsdelivr.net/npm/@mathjax/mathjax-newcm-font/chtml/woff2/mjx-ncm-b.woff2') format('woff2');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'MathJax_Main';
-  src: url('https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Italic.woff') format('woff');
+  font-family: 'MathJax_NewCM';
+  src: url('https://cdn.jsdelivr.net/npm/@mathjax/mathjax-newcm-font/chtml/woff2/mjx-ncm-i.woff2') format('woff2');
   font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MathJax_NewCM';
+  src: url('https://cdn.jsdelivr.net/npm/@mathjax/mathjax-newcm-font/chtml/woff2/mjx-ncm-bi.woff2') format('woff2');
+  font-weight: 700;
   font-style: italic;
   font-display: swap;
 }

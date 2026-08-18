@@ -41,6 +41,19 @@
   --ximera-color-muted-fg: #555;
   --ximera-color-muted-border: #999;
 
+  /* Environment box palettes. Legacy Ximera never shipped default
+     theorem styling; courses supplied their own CSS. We ship a
+     four-palette taxonomy so a fresh course has usable boxes out of
+     the box, and expose tokens so a theme is a single override. */
+  --ximera-color-env-thm: #1976d2;         /* blue — formal statements */
+  --ximera-color-env-thm-bg: #edf4fc;
+  --ximera-color-env-def: #2e7d32;         /* green — constructive / definitional */
+  --ximera-color-env-def-bg: #eaf5ea;
+  --ximera-color-env-rem: #a1670c;         /* amber — commentary */
+  --ximera-color-env-rem-bg: #fdf6e3;
+  --ximera-color-env-warn: #c62828;        /* red — caution */
+  --ximera-color-env-warn-bg: #fdecea;
+
   /* Shape */
   --ximera-radius: 4px;
   --ximera-focus-ring: 2px solid var(--ximera-color-focus);
@@ -123,6 +136,136 @@ body h1, body h2, body h3, body h4 {
   margin-bottom: 0.4em;
 }
 
+/* ─── Environment boxes ──────────────────────────────────────────────────── */
+
+/* The 4ht configuration in ximeraLatex wraps every theorem-like environment
+   (theorem, definition, remark, warning, proof, …27 total) in
+     <div class="theorem-like problem-environment {name}">
+       <span class="theorem-like-title"> Theorem </span>
+       …body…
+     </div>
+   Plain problems emit `<div class="problem-environment problem">` (no
+   `theorem-like` class). We paint them all with a colored left border,
+   a tinted background, and a colored title span, grouped into four
+   palettes. Courses override --ximera-color-env-* to retheme. */
+
+.theorem-like,
+.problem-environment.problem {
+  border-left: 4px solid var(--ximera-color-neutral-border);
+  background: var(--ximera-color-neutral-bg);
+  padding: 0.5em 0.8em;
+  margin: 1em 0;
+  border-radius: 0 var(--ximera-radius) var(--ximera-radius) 0;
+}
+
+.theorem-like-title {
+  font-weight: 700;
+  color: var(--ximera-color-muted-fg);
+  margin-right: 0.4em;
+}
+
+/* Blue — formal statements. `.problem-environment.problem` joins this
+   group so an ungraded `\begin{problem}` looks like a theorem-family
+   box; the completion rule below repaints the border green when done. */
+.theorem-like.theorem,
+.theorem-like.corollary,
+.theorem-like.lemma,
+.theorem-like.proposition,
+.theorem-like.claim,
+.theorem-like.conjecture,
+.theorem-like.criterion,
+.theorem-like.fact,
+.theorem-like.formula,
+.problem-environment.problem {
+  border-left-color: var(--ximera-color-env-thm);
+  background: var(--ximera-color-env-thm-bg);
+}
+.theorem-like.theorem > .theorem-like-title,
+.theorem-like.corollary > .theorem-like-title,
+.theorem-like.lemma > .theorem-like-title,
+.theorem-like.proposition > .theorem-like-title,
+.theorem-like.claim > .theorem-like-title,
+.theorem-like.conjecture > .theorem-like-title,
+.theorem-like.criterion > .theorem-like-title,
+.theorem-like.fact > .theorem-like-title,
+.theorem-like.formula > .theorem-like-title {
+  color: var(--ximera-color-env-thm);
+}
+
+/* Green — constructive / definitional. */
+.theorem-like.definition,
+.theorem-like.notation,
+.theorem-like.example,
+.theorem-like.procedure,
+.theorem-like.algorithm,
+.theorem-like.model,
+.theorem-like.template {
+  border-left-color: var(--ximera-color-env-def);
+  background: var(--ximera-color-env-def-bg);
+}
+.theorem-like.definition > .theorem-like-title,
+.theorem-like.notation > .theorem-like-title,
+.theorem-like.example > .theorem-like-title,
+.theorem-like.procedure > .theorem-like-title,
+.theorem-like.algorithm > .theorem-like-title,
+.theorem-like.model > .theorem-like-title,
+.theorem-like.template > .theorem-like-title {
+  color: var(--ximera-color-env-def);
+}
+
+/* Amber — commentary. */
+.theorem-like.remark,
+.theorem-like.observation,
+.theorem-like.idea,
+.theorem-like.summary,
+.theorem-like.explanation,
+.theorem-like.conclusion,
+.theorem-like.condition,
+.theorem-like.axiom {
+  border-left-color: var(--ximera-color-env-rem);
+  background: var(--ximera-color-env-rem-bg);
+}
+.theorem-like.remark > .theorem-like-title,
+.theorem-like.observation > .theorem-like-title,
+.theorem-like.idea > .theorem-like-title,
+.theorem-like.summary > .theorem-like-title,
+.theorem-like.explanation > .theorem-like-title,
+.theorem-like.conclusion > .theorem-like-title,
+.theorem-like.condition > .theorem-like-title,
+.theorem-like.axiom > .theorem-like-title {
+  color: var(--ximera-color-env-rem);
+}
+
+/* Red — caution. */
+.theorem-like.warning,
+.theorem-like.paradox {
+  border-left-color: var(--ximera-color-env-warn);
+  background: var(--ximera-color-env-warn-bg);
+}
+.theorem-like.warning > .theorem-like-title,
+.theorem-like.paradox > .theorem-like-title {
+  color: var(--ximera-color-env-warn);
+}
+
+/* Proof — no box, italic prelude, terminal ∎. The 4ht wraps it in the
+   same theorem-like scaffold, so we selectively strip the chrome. */
+.theorem-like.proof {
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 1em 0;
+}
+.theorem-like.proof > .theorem-like-title {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--ximera-color-muted-fg);
+}
+.theorem-like.proof::after {
+  content: "\220E";                        /* ∎ */
+  float: right;
+  color: var(--ximera-color-muted-fg);
+}
+
 /* ─── Problem environments ───────────────────────────────────────────────── */
 
 /* Blocking sub-problems occupy layout space (so MathJax can measure) but
@@ -142,9 +285,12 @@ body h1, body h2, body h3, body h4 {
   transition: opacity 0.4s ease;
 }
 
+/* Completion repaints the left border green. Width matches the env-box
+   rule above so a `.problem-environment.problem` doesn't shift on
+   completion; the explicit border shorthand also covers a bare
+   `.problem-environment` that didn't receive an env-box border. */
 .problem-environment[data-state~="complete"] {
-  border-left: 3px solid var(--ximera-color-correct);
-  padding-left: 0.5em;
+  border-left: 4px solid var(--ximera-color-correct);
 }
 
 /* ─── Feedback ───────────────────────────────────────────────────────────── */

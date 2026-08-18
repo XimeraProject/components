@@ -170,9 +170,27 @@ register('.answer.respondable', (el, dispatchFn) => {
   }));
 }, { answerable: true });
 
+// Poll until MathJax has replaced our config literal with the real object
+// (which exposes `.startup`, `.typesetPromise`, etc). Bounded so a genuinely
+// absent MathJax script doesn't hang mount forever.
+async function waitForMathJax(timeoutMs = 10000, intervalMs = 50) {
+  if (typeof window === 'undefined') return undefined;
+  const deadline = Date.now() + timeoutMs;
+  while (!window.MathJax?.startup) {
+    if (Date.now() >= deadline) return window.MathJax;
+    await new Promise(resolve => setTimeout(resolve, intervalMs));
+  }
+  return window.MathJax;
+}
+
 async function mountPhaseB(el, dispatchFn) {
   // Wait for MathJax to finish typesetting so the \cssId'd \phantom span exists.
-  const mj = typeof window !== 'undefined' ? window.MathJax : undefined;
+  // The agent's onReady can beat MathJax's <script async> to the finish line;
+  // when that happens window.MathJax is still just our config literal and has
+  // no `.startup` yet, so optional-chaining `mj?.startup?.promise` would
+  // silently skip the await and we'd check for the placeholder before MathJax
+  // has even parsed the page. Poll until MathJax installs itself.
+  const mj = await waitForMathJax();
   if (mj?.startup?.promise) await mj.startup.promise;
   if (mj?.typesetPromise) {
     try { await mj.typesetPromise(); } catch { /* first-load races are fine */ }
@@ -241,9 +259,23 @@ async function mountPhaseB(el, dispatchFn) {
     debouncedPopover();
   });
 
+  // MathJax 4's tex-chtml bundle preloads the assistive Explorer, which
+  // installs mousedown/click/focusin/keydown listeners on the mjx-container.
+  // Because the input sits inside the rendered CHTML tree (positioned over
+  // the placeholder \phantom), those listeners see events first: pointer
+  // events get treated as "highlight this subexpression" (blocking focus),
+  // and keystrokes get treated as Explorer navigation commands (which beep
+  // when they don't match a binding). Stop propagation at the input so
+  // ancestor handlers never fire.
+  const isolate = (event) => event.stopPropagation();
+  input.addEventListener('mousedown', isolate);
+  input.addEventListener('click', isolate);
+  input.addEventListener('focusin', isolate);
+  input.addEventListener('keyup', isolate);
+  input.addEventListener('keypress', isolate);
+
   input.addEventListener('keydown', (event) => {
-    // Legacy line 106-110: prevent space from opening MathJax context menu.
-    if (event.keyCode === 32 || event.key === ' ') event.stopPropagation();
+    event.stopPropagation();
     // Legacy line 437-442: Enter triggers Check.
     if (event.keyCode === 13 || event.key === 'Enter') {
       event.preventDefault();

@@ -21,15 +21,25 @@ export default async function postprocess($, _ctx) {
   extractAnswerBlanks($);
 }
 
+// The html TeX extension provides \cssId. In MathJax 3's tex-chtml-full
+// bundle it came preloaded; MathJax 4's tex-chtml bundle only ships
+// ams/newcommand/require/autoload/configmacros/textmacros/noundefined,
+// so we now add BOTH a `loader.load` entry (fetches the extension code)
+// and a `tex.packages` entry (activates it for the tex processor).
 export function injectMathJaxHtmlExtension($) {
   $('script').each((_, el) => {
     const src = $(el).html();
     if (!src || !src.includes('MathJax')) return;
     if (src.includes("'[+]'") || src.includes('"[+]"')) return false;
-    const patched = src.replace(
-      /(tex\s*:\s*\{)/,
-      `$1 packages: { '[+]': ['html'] },`
-    );
+    const patched = src
+      .replace(
+        /(window\.MathJax\s*=\s*\{)/,
+        `$1 loader: { load: ['[tex]/html'] },`
+      )
+      .replace(
+        /(tex\s*:\s*\{)/,
+        `$1 packages: { '[+]': ['html'] },`
+      );
     if (patched !== src) {
       $(el).html(patched);
       return false;

@@ -141,6 +141,16 @@ describe('injectMathJaxHtmlExtension', () => {
     assert.ok(src.includes('html'));
   });
 
+  it('adds loader.load so MathJax 4 fetches the html extension', () => {
+    const $ = load(`<html><head>
+      <script>window.MathJax = { tex: { tags: "ams" } };</script>
+    </head></html>`);
+    injectMathJaxHtmlExtension($);
+    const src = $('script').html();
+    assert.ok(src.includes('loader'));
+    assert.ok(src.includes('[tex]/html'));
+  });
+
   it('is idempotent — does not double-patch', () => {
     const $ = load(`<html><head>
       <script>window.MathJax = { tex: { tags: "ams" } };</script>

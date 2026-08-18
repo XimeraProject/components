@@ -56,16 +56,48 @@
      `body { --ximera-content-width: 60em; }` for wider layouts. */
   --ximera-content-width: 42em;
 
-  /* Body font — matches MathJax's Latin-Modern-style math glyphs where
-     the reader has those fonts installed, and falls back through STIX
-     (MathJax's own text companion), Computer Modern, and finally
-     system serifs. Kept as a token so courses can retheme (e.g. sans
-     for a modernist look) with one override. */
+  /* Body font — MathJax_Main is the identical webfont MathJax uses to
+     render text inside math expressions (`\text{...}`, operator names,
+     etc.), served from the same CDN as MathJax itself. Putting it
+     first in the stack guarantees an exact visual match: the "x" in a
+     sentence looks the same as the "x" in an equation. Fallbacks pick
+     up any glyphs MathJax_Main doesn't cover (extended Latin,
+     accented characters) and cover the case where the CDN is
+     unreachable — in that case we still render in a MathJax-lookalike
+     serif. The @font-face declarations below source the actual font
+     files. */
   --ximera-font-serif:
+    "MathJax_Main",
     "Latin Modern Roman", "LMRoman10-Regular",
     "STIX Two Text", "STIXGeneral",
     "Computer Modern Serif", "CMU Serif",
     Georgia, "Times New Roman", Times, serif;
+}
+
+/* ─── MathJax_Main webfont — served from MathJax's own CDN ──────────────── */
+
+@font-face {
+  font-family: 'MathJax_Main';
+  src: url('https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MathJax_Main';
+  src: url('https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Bold.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MathJax_Main';
+  src: url('https://cdn.jsdelivr.net/npm/mathjax@3/es5/output/chtml/fonts/woff-v2/MathJax_Main-Italic.woff') format('woff');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
 }
 
 /* ─── Page defaults — readability + typographic match to MathJax ────────── */

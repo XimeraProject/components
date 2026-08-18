@@ -49,6 +49,46 @@
   /* Button metrics */
   --ximera-btn-padding-y: 0.35em;
   --ximera-btn-padding-x: 0.9em;
+
+  /* Page metrics — max-width caps the measure (line length) to roughly
+     70 characters at the default font size, which is where prose
+     readability research settles. Courses can override with e.g.
+     `body { --ximera-content-width: 60em; }` for wider layouts. */
+  --ximera-content-width: 42em;
+
+  /* Body font — matches MathJax's Latin-Modern-style math glyphs where
+     the reader has those fonts installed, and falls back through STIX
+     (MathJax's own text companion), Computer Modern, and finally
+     system serifs. Kept as a token so courses can retheme (e.g. sans
+     for a modernist look) with one override. */
+  --ximera-font-serif:
+    "Latin Modern Roman", "LMRoman10-Regular",
+    "STIX Two Text", "STIXGeneral",
+    "Computer Modern Serif", "CMU Serif",
+    Georgia, "Times New Roman", Times, serif;
+}
+
+/* ─── Page defaults — readability + typographic match to MathJax ────────── */
+
+body {
+  font-family: var(--ximera-font-serif);
+  max-width: var(--ximera-content-width);
+  margin: 0 auto;
+  padding: 1.5em 1.5em 4em;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: #222;
+  background: #fff;
+}
+
+body p {
+  margin: 0.6em 0;
+}
+
+body h1, body h2, body h3, body h4 {
+  line-height: 1.25;
+  margin-top: 1.5em;
+  margin-bottom: 0.4em;
 }
 
 /* ─── Problem environments ───────────────────────────────────────────────── */

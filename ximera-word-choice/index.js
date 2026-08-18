@@ -9,7 +9,9 @@
 //     …
 //   </span>
 
-import { register, registerReducer, registerRender } from 'ximera-core/kernel';
+import {
+  register, registerReducer, registerRender, syncAnswerableState,
+} from 'ximera-core/kernel';
 
 registerReducer('ximera-word-choice:SELECT', (model, msg) => {
   const prev = model[msg.problemId] ?? {};
@@ -29,10 +31,7 @@ registerReducer('ximera-word-choice:SELECT', (model, msg) => {
 });
 
 registerRender('.word-choice', (el, entry) => {
-  const parts = [];
-  if (entry.correct) parts.push('correct');
-  else if (entry.checked != null) parts.push('attempted');
-  el.dataset.state = parts.join(' ');
+  syncAnswerableState(el, entry);
 
   const select = el.querySelector('select.ximera-word-select');
   if (select) {

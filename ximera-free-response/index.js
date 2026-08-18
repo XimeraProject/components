@@ -8,8 +8,10 @@
 // DOM at mount (from ximera.4ht's freeResponse environment):
 //   <div class="free-response" id="problemN">…author prose…</div>
 
-import { register, registerReducer, registerRender, focusGuardSyncValue }
-  from 'ximera-core/kernel';
+import {
+  register, registerReducer, registerRender, focusGuardSyncValue,
+  createSubmitButton,
+} from 'ximera-core/kernel';
 
 // ─── Reducers ──────────────────────────────────────────────────────────────
 
@@ -33,6 +35,10 @@ registerReducer('ximera-free-response:SUBMIT', (model, msg) => {
 // ─── Render ────────────────────────────────────────────────────────────────
 
 registerRender('.free-response', (el, entry) => {
+  // Free-response is ungraded — its container state is "submitted", not
+  // "correct". CSS for this pilot keys on data-state="submitted" to green
+  // the textarea. The button gets data-state="correct" so it inherits
+  // the shared success palette (✓ glyph + green fill) from ximera-core.css.
   el.dataset.state = entry.submitted ? 'submitted' : '';
 
   const ta = el.querySelector('textarea.ximera-free-response-input');
@@ -45,6 +51,7 @@ registerRender('.free-response', (el, entry) => {
 
   const btn = el.querySelector('.ximera-submit-btn');
   if (btn) {
+    btn.dataset.state = entry.submitted ? 'correct' : '';
     btn.disabled = !!entry.submitted;
     btn.textContent = entry.submitted ? 'Submitted' : 'Submit';
   }
@@ -62,17 +69,15 @@ register('.free-response', (el, dispatch) => {
   ta.setAttribute('aria-label', 'response');
   ta.setAttribute('rows', '5');
 
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'ximera-submit-btn';
-  btn.textContent = 'Submit';
-  btn.setAttribute('aria-label', 'submit response');
-
   ta.addEventListener('input', () => {
     dispatch({ type: 'ximera-free-response:INPUT', id: el.id, value: ta.value });
   });
-  btn.addEventListener('click', () => {
-    dispatch({ type: 'ximera-free-response:SUBMIT', id: el.id });
+
+  const btn = createSubmitButton({
+    dispatch,
+    type: 'ximera-free-response:SUBMIT',
+    extras: { id: el.id },
+    variant: 'full',
   });
 
   el.appendChild(ta);

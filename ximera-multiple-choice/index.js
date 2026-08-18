@@ -14,8 +14,11 @@
 //     …
 //   </div>
 
-import { register, registerReducer, registerRender, readModel } from 'ximera-core/kernel';
-import { shuffleIds, generateSeed } from 'ximera-choice-util';
+import {
+  register, registerReducer, registerRender, readModel,
+  syncAnswerableState, createCheckButton, wireChoiceList,
+} from 'ximera-core/kernel';
+import { initShuffleAtMount, shuffleInitReducer } from 'ximera-choice-util';
 
 // ─── Reducers ──────────────────────────────────────────────────────────────
 
@@ -49,19 +52,13 @@ registerReducer('ximera-multiple-choice:CHECK', (model, msg) => {
   };
 });
 
-registerReducer('ximera-multiple-choice:SHUFFLE_INIT', (model, msg) => {
-  const prev = model[msg.problemId] ?? {};
-  if (prev.seed !== undefined) return model;
-  return { ...model, [msg.problemId]: { ...prev, seed: msg.seed } };
-});
+registerReducer('ximera-multiple-choice:SHUFFLE_INIT', shuffleInitReducer());
 
 // ─── Render ────────────────────────────────────────────────────────────────
 
 registerRender('.multiple-choice', (el, entry) => {
-  const parts = [];
-  if (entry.correct) parts.push('correct');
-  else if (entry.checked != null) parts.push('attempted');
-  el.dataset.state = parts.join(' ');
+  const btn = el.querySelector('.ximera-check-btn');
+  syncAnswerableState(el, entry, btn);
 
   el.querySelectorAll('.choice').forEach((choice) => {
     const cp = [];
@@ -72,7 +69,6 @@ registerRender('.multiple-choice', (el, entry) => {
     choice.setAttribute('aria-checked', choice.id === entry.chosen ? 'true' : 'false');
   });
 
-  const btn = el.querySelector('.ximera-check-btn');
   if (btn) btn.style.display = entry.correct ? 'none' : '';
 });
 
@@ -83,72 +79,25 @@ register('.multiple-choice', (el, dispatch) => {
   // Idempotence marker: presence of the Check button.
   if (el.querySelector('.ximera-check-btn')) return;
 
-  // Shuffle setup. .shuffle on the element itself OR on an ancestor
-  // opts into deterministic per-learner permutation.
-  const wantsShuffle =
-    el.classList.contains('shuffle') || el.closest('.shuffle') !== null;
+  initShuffleAtMount(el, {
+    currentSeed: readModel()[el.id]?.seed,
+    dispatch,
+    msgType: 'ximera-multiple-choice:SHUFFLE_INIT',
+  });
 
-  if (wantsShuffle) {
-    // The entry is what the kernel has after the initial reduce — it may
-    // already carry a seed from persisted state. If not, generate one and
-    // dispatch SHUFFLE_INIT so it lands in the model and persists.
-    const currentEntry = readModel()[el.id] ?? {};
-    const seed = currentEntry.seed ?? generateSeed();
-    if (currentEntry.seed === undefined) {
-      dispatch({ type: 'ximera-multiple-choice:SHUFFLE_INIT', problemId: el.id, seed });
-    }
-    permuteChoicesInPlace(el, seed);
-  }
-
-  // Wire choice clicks.
-  el.querySelectorAll('.choice').forEach((choice) => {
-    if (!choice.id) return;
-    choice.setAttribute('role', 'radio');
-    choice.setAttribute('tabindex', '0');
-    choice.setAttribute('aria-checked', 'false');
-    const select = () => dispatch({
+  wireChoiceList(el, dispatch, {
+    role: 'radio',
+    buildMessage: (choiceId) => ({
       type: 'ximera-multiple-choice:SELECT',
       problemId: el.id,
-      choiceId: choice.id,
-    });
-    choice.addEventListener('click', select);
-    choice.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        select();
-      }
-    });
+      choiceId,
+    }),
   });
 
-  el.setAttribute('role', 'radiogroup');
-
-  // Check button.
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'ximera-check-btn';
-  btn.textContent = 'Check';
-  btn.setAttribute('aria-label', 'check answer');
-  btn.addEventListener('click', () => {
-    dispatch({ type: 'ximera-multiple-choice:CHECK', problemId: el.id });
-  });
-  el.appendChild(btn);
+  el.appendChild(createCheckButton({
+    dispatch,
+    type: 'ximera-multiple-choice:CHECK',
+    extras: { problemId: el.id },
+    variant: 'full',
+  }));
 }, { answerable: true });
-
-// ─── Helpers ───────────────────────────────────────────────────────────────
-
-// Reorder .choice children of el in place per the seeded shuffle. Runs
-// exactly once at mount; render never touches DOM order (guardrail 2:
-// renders are pure projections).
-function permuteChoicesInPlace(el, seed) {
-  const choices = [...el.querySelectorAll('.choice')].filter((c) => c.id);
-  if (choices.length <= 1) return;
-  const originalOrder = choices.map((c) => c.id);
-  const shuffledOrder = shuffleIds(originalOrder, seed);
-  // Re-append in shuffled order. appendChild moves the node — no clone.
-  const parent = choices[0].parentNode;
-  for (const id of shuffledOrder) {
-    const c = document.getElementById(id);
-    if (c && c.parentNode === parent) parent.appendChild(c);
-  }
-}
-

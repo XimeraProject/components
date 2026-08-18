@@ -19,7 +19,15 @@ import { _resetBoot, _getModel, _getAgent, dispatch, boot } from './boot.js';
 // setProgress call, exposes triggerPageStateChanged for the server-push
 // path, and lets the test decide when onReady fires (immediately by
 // default, or via .startReady()).
-export function createMockAgent({ initialPageState = null, autoReady = true } = {}) {
+// echoOnSetPageState: if true, setPageState synchronously emits
+// 'pagestate-changed' — mirrors the real @modulus-learning/agent, which does
+// this on every write. Default false so existing tests remain unchanged;
+// boot.test.js uses true to exercise the echo-suppression guard.
+export function createMockAgent({
+  initialPageState = null,
+  autoReady = true,
+  echoOnSetPageState = false,
+} = {}) {
   const listeners = { 'pagestate-changed': [] };
   let readyCallback = null;
   let ready = false;
@@ -39,6 +47,9 @@ export function createMockAgent({ initialPageState = null, autoReady = true } = 
     setPageState(state) {
       currentPageState = state;
       pageStateCalls.push(state);
+      if (echoOnSetPageState) {
+        for (const cb of listeners['pagestate-changed']) cb({ pageState: state });
+      }
     },
     setProgress(p) {
       progressCalls.push(p);
@@ -103,6 +114,7 @@ export async function mountFixture(html, options = {}) {
   const agent = createMockAgent({
     initialPageState: options.initialPageState ?? null,
     autoReady: options.autoReady !== false,
+    echoOnSetPageState: options.echoOnSetPageState === true,
   });
   const bootPromise = boot(agent, {
     confirmReset: options.confirmReset ?? (() => true),

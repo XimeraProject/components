@@ -19,8 +19,10 @@
 //
 // See specs/components/ximera-answer.md.
 
-import { register, registerReducer, registerRender, readModel, focusGuardSyncValue }
-  from 'ximera-core/kernel';
+import {
+  register, registerReducer, registerRender, readModel, focusGuardSyncValue,
+  syncAnswerableState, createCheckButton,
+} from 'ximera-core/kernel';
 import Expression from 'math-expressions';
 
 // ─── Equality engine (D8) ──────────────────────────────────────────────────
@@ -118,10 +120,8 @@ registerReducer('ximera-answer:CHECK', (model, msg) => {
 // ─── Render ────────────────────────────────────────────────────────────────
 
 registerRender('.answer.respondable', (el, entry) => {
-  const parts = ['respondable'];
-  if (entry.correct) parts.push('correct');
-  else if (entry.attempt !== undefined) parts.push('attempted');
-  el.dataset.state = parts.join(' ');
+  const btn = findCheckButton(el);
+  syncAnswerableState(el, entry, btn);
 
   const placeholder = el.dataset.placeholderId
     ? document.getElementById(el.dataset.placeholderId)
@@ -132,7 +132,6 @@ registerRender('.answer.respondable', (el, entry) => {
     input.disabled = !!entry.correct;
   }
 
-  const btn = findCheckButton(el);
   if (btn) btn.style.display = entry.correct ? 'none' : '';
 
   if (entry.correct) {
@@ -215,23 +214,23 @@ async function mountPhaseB(el, dispatchFn) {
   placeholder.appendChild(popover);
 
   const wrapper = el.closest('.ximera-math-with-answers');
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'ximera-check-btn';
-  btn.textContent = 'Check';
-  btn.setAttribute('aria-label', 'check work');
-  btn.dataset.answerId = el.id;
+  const checkExtras = {
+    id: el.id,
+    correctText: el.dataset.correctText ?? '',
+    format: el.dataset.format,
+    tolerance: el.dataset.tolerance,
+  };
+  const btn = createCheckButton({
+    dispatch: dispatchFn,
+    type: 'ximera-answer:CHECK',
+    extras: checkExtras,
+    variant: 'icon',
+    ariaLabel: 'check work',
+    attrs: { 'data-answer-id': el.id },
+  });
   wrapper?.parentNode?.insertBefore(btn, wrapper.nextSibling);
 
-  const doCheck = () => {
-    dispatchFn({
-      type: 'ximera-answer:CHECK',
-      id: el.id,
-      correctText: el.dataset.correctText ?? '',
-      format: el.dataset.format,
-      tolerance: el.dataset.tolerance,
-    });
-  };
+  const doCheck = () => dispatchFn({ type: 'ximera-answer:CHECK', ...checkExtras });
 
   const debouncedPopover = debounce(() => {
     updatePopover(input, popover, el.dataset.format);
@@ -258,8 +257,6 @@ async function mountPhaseB(el, dispatchFn) {
     if (input.disabled) return;
     debouncedPopover();
   });
-
-  btn.addEventListener('click', doCheck);
 
   // Reconcile against the current model. The initial render fired before
   // Phase B installed this chrome, so we replay the projection now for the

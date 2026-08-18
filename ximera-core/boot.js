@@ -11,6 +11,13 @@ let model = initialModel();
 let agentRef = null;
 let bootedOnce = false;
 
+// The real @modulus-learning/agent emits `pagestate-changed` synchronously
+// on every setPageState call, including our own writes. Without this guard
+// a single dispatch → setPageState → emit → dispatch → … loop crashes with
+// a stack overflow. Set true across our own setPageState so the listener
+// (installed below) skips the echo.
+let suppressPageStateEcho = false;
+
 // readModel: read-only snapshot of the current model. Consumers MUST NOT
 // mutate; JavaScript can't enforce it, so treat the returned object as
 // frozen. Useful in mount functions that need to consult persisted state
@@ -27,7 +34,12 @@ export function dispatch(msg) {
   if (model === before) return;    // no-op reduce → no render, no persist
   render(model, before);
   if (agentRef) {
-    agentRef.setPageState(modelToPageState(model));
+    suppressPageStateEcho = true;
+    try {
+      agentRef.setPageState(modelToPageState(model));
+    } finally {
+      suppressPageStateEcho = false;
+    }
     agentRef.setProgress(calculateProgress(model));
   }
 }
@@ -91,8 +103,12 @@ export async function boot(agent, options = {}) {
     });
   });
 
-  // Server-pushed state updates re-enter the dispatch loop.
+  // Server-pushed state updates re-enter the dispatch loop. The real agent
+  // also emits this event on our own setPageState writes; suppressPageStateEcho
+  // (set inside dispatch) filters those out so we only re-dispatch on
+  // externally-originated changes.
   agent.on('pagestate-changed', ({ pageState }) => {
+    if (suppressPageStateEcho) return;
     dispatch({ type: 'PAGE_STATE_RESTORED', pageState });
   });
 }

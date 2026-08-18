@@ -10,8 +10,11 @@
 //     …
 //   </div>
 
-import { register, registerReducer, registerRender, readModel } from 'ximera-core/kernel';
-import { shuffleIds, generateSeed } from 'ximera-choice-util';
+import {
+  register, registerReducer, registerRender, readModel,
+  syncAnswerableState, createCheckButton, wireChoiceList,
+} from 'ximera-core/kernel';
+import { initShuffleAtMount, shuffleInitReducer } from 'ximera-choice-util';
 
 // ─── Reducers ──────────────────────────────────────────────────────────────
 
@@ -54,19 +57,13 @@ registerReducer('ximera-select-all:CHECK', (model, msg) => {
   };
 });
 
-registerReducer('ximera-select-all:SHUFFLE_INIT', (model, msg) => {
-  const prev = model[msg.problemId] ?? {};
-  if (prev.seed !== undefined) return model;
-  return { ...model, [msg.problemId]: { ...prev, seed: msg.seed } };
-});
+registerReducer('ximera-select-all:SHUFFLE_INIT', shuffleInitReducer());
 
 // ─── Render ────────────────────────────────────────────────────────────────
 
 registerRender('.select-all', (el, entry) => {
-  const parts = [];
-  if (entry.correct) parts.push('correct');
-  else if (entry.checked != null) parts.push('attempted');
-  el.dataset.state = parts.join(' ');
+  const btn = el.querySelector('.ximera-check-btn');
+  syncAnswerableState(el, entry, btn);
 
   const chosenSet = new Set(entry.chosen ?? []);
   el.querySelectorAll('.choice').forEach((choice) => {
@@ -77,7 +74,6 @@ registerRender('.select-all', (el, entry) => {
     choice.setAttribute('aria-checked', chosenSet.has(choice.id) ? 'true' : 'false');
   });
 
-  const btn = el.querySelector('.ximera-check-btn');
   if (btn) btn.style.display = entry.correct ? 'none' : '';
 });
 
@@ -87,60 +83,25 @@ register('.select-all', (el, dispatch) => {
   if (!el.id) return;
   if (el.querySelector('.ximera-check-btn')) return;
 
-  const wantsShuffle =
-    el.classList.contains('shuffle') || el.closest('.shuffle') !== null;
+  initShuffleAtMount(el, {
+    currentSeed: readModel()[el.id]?.seed,
+    dispatch,
+    msgType: 'ximera-select-all:SHUFFLE_INIT',
+  });
 
-  if (wantsShuffle) {
-    const currentEntry = readModel()[el.id] ?? {};
-    const seed = currentEntry.seed ?? generateSeed();
-    if (currentEntry.seed === undefined) {
-      dispatch({ type: 'ximera-select-all:SHUFFLE_INIT', problemId: el.id, seed });
-    }
-    permuteChoicesInPlace(el, seed);
-  }
-
-  el.setAttribute('role', 'group');
-
-  el.querySelectorAll('.choice').forEach((choice) => {
-    if (!choice.id) return;
-    choice.setAttribute('role', 'checkbox');
-    choice.setAttribute('tabindex', '0');
-    choice.setAttribute('aria-checked', 'false');
-    const toggle = () => dispatch({
+  wireChoiceList(el, dispatch, {
+    role: 'checkbox',
+    buildMessage: (choiceId) => ({
       type: 'ximera-select-all:TOGGLE',
       problemId: el.id,
-      choiceId: choice.id,
-    });
-    choice.addEventListener('click', toggle);
-    choice.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        toggle();
-      }
-    });
+      choiceId,
+    }),
   });
 
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'ximera-check-btn';
-  btn.textContent = 'Check';
-  btn.setAttribute('aria-label', 'check answer');
-  btn.addEventListener('click', () => {
-    dispatch({ type: 'ximera-select-all:CHECK', problemId: el.id });
-  });
-  el.appendChild(btn);
+  el.appendChild(createCheckButton({
+    dispatch,
+    type: 'ximera-select-all:CHECK',
+    extras: { problemId: el.id },
+    variant: 'full',
+  }));
 }, { answerable: true });
-
-// ─── Helpers ───────────────────────────────────────────────────────────────
-
-function permuteChoicesInPlace(el, seed) {
-  const choices = [...el.querySelectorAll('.choice')].filter((c) => c.id);
-  if (choices.length <= 1) return;
-  const originalOrder = choices.map((c) => c.id);
-  const shuffledOrder = shuffleIds(originalOrder, seed);
-  const parent = choices[0].parentNode;
-  for (const id of shuffledOrder) {
-    const c = document.getElementById(id);
-    if (c && c.parentNode === parent) parent.appendChild(c);
-  }
-}

@@ -8,7 +8,7 @@ h3.xmhint {
   gap: 0.4em;
   font-size: 1em;
   margin: 0.5em 0 0.2em;
-  color: #555;
+  color: var(--ximera-color-muted-fg);
 }
 
 h3.xmhint::before {
@@ -23,14 +23,14 @@ h3.xmhint[aria-expanded="true"]::before {
 }
 
 h3.xmhint:focus {
-  outline: 2px solid #4a90d9;
+  outline: var(--ximera-focus-ring);
   outline-offset: 2px;
 }
 
 .xmhint-content {
   display: none;
   padding: 0.5em 0 0.5em 1.2em;
-  border-left: 3px solid #ccc;
+  border-left: 3px solid var(--ximera-color-neutral-border);
   margin: 0.2em 0 0.8em 0.4em;
 }
 

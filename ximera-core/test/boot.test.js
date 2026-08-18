@@ -114,3 +114,25 @@ test('pagestate-changed re-enters via PAGE_STATE_RESTORED', async () => {
   const { model } = inspect();
   assert.equal(model['p-1'].complete, true);
 });
+
+// Real @modulus-learning/agent synchronously emits 'pagestate-changed' on
+// every setPageState. Without the echo-suppression guard, dispatch →
+// setPageState → emit → dispatch loops until the stack overflows. This
+// test uses the mock's echoOnSetPageState mode to reproduce that path.
+test('setPageState echo does not re-enter dispatch (no infinite loop)', async () => {
+  resetKernel();
+  registerReducer('test:BUMP', (m, msg) => ({
+    ...m,
+    [msg.id]: { ...(m[msg.id] ?? {}), n: (m[msg.id]?.n ?? 0) + 1 },
+  }));
+  const { agent } = await mountFixture(
+    `<div class="problem-environment" id="p-1"></div>`,
+    { echoOnSetPageState: true }
+  );
+  const callsBefore = agent.pageStateCalls.length;
+  dispatch({ type: 'test:BUMP', id: 'p-1' });
+  const { model } = inspect();
+  assert.equal(model['p-1'].n, 1);
+  // Exactly one setPageState per dispatch — the echo must not trigger another.
+  assert.equal(agent.pageStateCalls.length, callsBefore + 1);
+});

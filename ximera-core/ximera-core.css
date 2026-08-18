@@ -1,16 +1,55 @@
 /* ============================================================
-   ximera-core.css — kernel-owned CSS
+   ximera-core.css — kernel-owned CSS + shared design vocabulary
 
-   The kernel projects state onto three kinds of DOM elements:
-   .problem-environment  → data-state = "available? complete? experienced?"
-   .feedback             → data-state = "visible" | "hidden"
-   .ximera-reset-btn     → reset-work control chrome
+   Two roles:
 
-   Everything else is component-owned CSS. Each ximera-* package ships
-   its own visual language via its "latex".css array. Kernel CSS stays
-   the smallest surface that lets uncovering, feedback, and reset work
-   without any component present.
+   1. Kernel-projected classes. The kernel writes `data-state` on
+      exactly two selectors and installs one chrome button:
+        .problem-environment  → "available? complete? experienced?"
+        .feedback             → "visible" | "hidden"
+        .ximera-reset-btn     → reset-work control chrome
+
+   2. Shared design tokens + button vocabulary. Every ximera-* pilot
+      pulls colors, radii, and focus rings from the :root variables
+      below, so a course theme is a single override. The .ximera-btn
+      base + variants (--full, --icon) + state palette ("correct",
+      "attempted", "incorrect") are shipped here so that submit /
+      check buttons look identical across mc, sa, fr, answer, and
+      third-party packages — legacy Ximera called these classes
+      .btn-ximera-submit / -correct / -incorrect; the state variants
+      preserve that visual language.
    ============================================================ */
+
+/* ─── Design tokens ──────────────────────────────────────────────────────── */
+
+:root {
+  /* Palette */
+  --ximera-color-primary: #2196f3;
+  --ximera-color-primary-hover: #1976d2;
+  --ximera-color-primary-fg: #ffffff;
+
+  --ximera-color-correct: #2a7a2a;
+  --ximera-color-correct-bg: #e8f8e8;
+
+  --ximera-color-incorrect: #c62828;
+  --ximera-color-incorrect-bg: #fdecea;
+
+  --ximera-color-focus: #4a90d9;
+  --ximera-color-neutral-bg: #f4f4f4;
+  --ximera-color-neutral-hover: #e9e9e9;
+  --ximera-color-neutral-border: #ccc;
+  --ximera-color-muted-fg: #555;
+  --ximera-color-muted-border: #999;
+
+  /* Shape */
+  --ximera-radius: 4px;
+  --ximera-focus-ring: 2px solid var(--ximera-color-focus);
+  --ximera-focus-ring-offset: 1px;
+
+  /* Button metrics */
+  --ximera-btn-padding-y: 0.35em;
+  --ximera-btn-padding-x: 0.9em;
+}
 
 /* ─── Problem environments ───────────────────────────────────────────────── */
 
@@ -32,7 +71,7 @@
 }
 
 .problem-environment[data-state~="complete"] {
-  border-left: 3px solid #4caf50;
+  border-left: 3px solid var(--ximera-color-correct);
   padding-left: 0.5em;
 }
 
@@ -46,6 +85,132 @@
   display: block;
 }
 
+/* ─── Buttons — base + variants + state ──────────────────────────────────── */
+
+/* .ximera-btn is the shape base — layout, radius, focus. It intentionally
+   does NOT set a color palette; a kind class (.ximera-check-btn,
+   .ximera-submit-btn) or state (.ximera-btn[data-state="correct"]) does. */
+.ximera-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35em;
+  padding: var(--ximera-btn-padding-y) var(--ximera-btn-padding-x);
+  font: inherit;
+  line-height: 1.2;
+  border: 1px solid transparent;
+  border-radius: var(--ximera-radius);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.ximera-btn:focus {
+  outline: var(--ximera-focus-ring);
+  outline-offset: var(--ximera-focus-ring-offset);
+}
+
+.ximera-btn:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+
+/* Kind: primary/check/submit. All three are the default action — filled blue. */
+.ximera-check-btn,
+.ximera-submit-btn {
+  background: var(--ximera-color-primary);
+  border-color: var(--ximera-color-primary);
+  color: var(--ximera-color-primary-fg);
+}
+
+.ximera-check-btn:hover:not(:disabled),
+.ximera-submit-btn:hover:not(:disabled) {
+  background: var(--ximera-color-primary-hover);
+  border-color: var(--ximera-color-primary-hover);
+}
+
+/* State: correct — check button flips to the success palette. Set by
+   pilots via btn.dataset.state = 'correct' when the answerable is right. */
+.ximera-btn[data-state="correct"],
+.ximera-check-btn[data-state="correct"],
+.ximera-submit-btn[data-state="correct"] {
+  background: var(--ximera-color-correct-bg);
+  border-color: var(--ximera-color-correct);
+  color: var(--ximera-color-correct);
+}
+
+.ximera-btn[data-state="correct"]::before,
+.ximera-check-btn[data-state="correct"]::before,
+.ximera-submit-btn[data-state="correct"]::before {
+  content: "\2713";        /* ✓ */
+}
+
+/* State: incorrect / attempted — flips to the danger palette. */
+.ximera-btn[data-state="incorrect"],
+.ximera-btn[data-state="attempted"],
+.ximera-check-btn[data-state="incorrect"],
+.ximera-check-btn[data-state="attempted"],
+.ximera-submit-btn[data-state="incorrect"],
+.ximera-submit-btn[data-state="attempted"] {
+  background: var(--ximera-color-incorrect-bg);
+  border-color: var(--ximera-color-incorrect);
+  color: var(--ximera-color-incorrect);
+}
+
+.ximera-btn[data-state="incorrect"]::before,
+.ximera-btn[data-state="attempted"]::before,
+.ximera-check-btn[data-state="incorrect"]::before,
+.ximera-check-btn[data-state="attempted"]::before,
+.ximera-submit-btn[data-state="incorrect"]::before,
+.ximera-submit-btn[data-state="attempted"]::before {
+  content: "\2717";        /* ✗ */
+}
+
+/* Variant: --full. Full-width button for standalone answerables (mc/sa/fr).
+   The container decides — the button matches the answerable's box. */
+.ximera-btn--full {
+  display: flex;
+  width: 100%;
+}
+
+/* Variant: --icon. Compact square for inline placements (next to a math
+   answer input). The ::before glyph does the labeling, so text content
+   can be empty or hidden. Used with data-state to show ✓ / ✗ / ? state. */
+.ximera-btn--icon {
+  padding: 0.15em 0.4em;
+  min-width: 1.8em;
+  min-height: 1.6em;
+  gap: 0;
+  font-size: 0.95em;
+}
+
+.ximera-btn--icon:not([data-state="correct"]):not([data-state="incorrect"]):not([data-state="attempted"])::before {
+  content: "?";
+  font-weight: bold;
+}
+
+/* Icon-only buttons hide their text label; the ::before glyph is the label. */
+.ximera-btn--icon {
+  color: transparent;
+}
+
+.ximera-btn--icon::before {
+  color: var(--ximera-color-primary-fg);
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.ximera-btn--icon[data-state="correct"]::before {
+  color: var(--ximera-color-correct);
+}
+
+.ximera-btn--icon[data-state="incorrect"]::before,
+.ximera-btn--icon[data-state="attempted"]::before {
+  color: var(--ximera-color-incorrect);
+}
+
 /* ─── Reset control ──────────────────────────────────────────────────────── */
 
 #ximera-page-controls {
@@ -54,21 +219,21 @@
 
 .ximera-reset-btn {
   display: inline-block;
-  padding: 0.35em 0.9em;
+  padding: var(--ximera-btn-padding-y) var(--ximera-btn-padding-x);
   font-size: 0.9em;
-  border: 1px solid #999;
-  border-radius: 4px;
-  background: #f4f4f4;
+  border: 1px solid var(--ximera-color-muted-border);
+  border-radius: var(--ximera-radius);
+  background: var(--ximera-color-neutral-bg);
   color: #333;
   cursor: pointer;
 }
 
 .ximera-reset-btn:hover {
-  background: #e9e9e9;
-  border-color: #777;
+  background: var(--ximera-color-neutral-hover);
+  border-color: var(--ximera-color-muted-fg);
 }
 
 .ximera-reset-btn:focus {
-  outline: 2px solid #4a90d9;
-  outline-offset: 1px;
+  outline: var(--ximera-focus-ring);
+  outline-offset: var(--ximera-focus-ring-offset);
 }

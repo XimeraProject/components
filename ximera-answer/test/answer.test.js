@@ -74,6 +74,26 @@ function symbolicFixture() {
   `;
 }
 
+// Fixture: an \answer{\sqrt{2}} case. data-correct-mathml is pre-set (in
+// production it's populated by mountPhaseB after MathJax.tex2mml — but
+// happy-dom has no MathJax, so we prime it directly to exercise the same
+// path the reducer takes).
+function sqrt2MathmlFixture() {
+  return `
+    <div class="problem-environment" id="p-5" role="article">
+      Simplify: <span class="ximera-math-with-answers">
+        <span class="mathjax-inline"><span id="placeholder-5"></span></span>
+        <span class="answer respondable"
+              id="a-5"
+              data-placeholder-id="placeholder-5"
+              data-correct-text="\\sqrt{2}"
+              data-correct-mathml="&lt;math&gt;&lt;msqrt&gt;&lt;mn&gt;2&lt;/mn&gt;&lt;/msqrt&gt;&lt;/math&gt;"
+              style="display:none"></span>
+      </span>.
+    </div>
+  `;
+}
+
 function twoBlanksFixture() {
   return `
     <div class="problem-environment" id="p-4" role="article">
@@ -116,7 +136,7 @@ test('mount: creates one input, one check button, one popover per answer', async
 
 // ─── 2. Correct integer completes the problem ──────────────────────────────
 
-test('correct integer answer completes the problem, disables input, hides Check', async () => {
+test('correct integer answer completes the problem, disables input, Check turns green', async () => {
   const { agent } = await setup(oneIntFixture());
   typeAndCheck('a-1', '17');
   const { model } = inspect();
@@ -128,13 +148,14 @@ test('correct integer answer completes the problem, disables input, hides Check'
   const input = document.querySelector('.ximera-answer-input');
   assert.equal(input.disabled, true);
   const btn = document.querySelector('.ximera-check-btn');
-  assert.equal(btn.style.display, 'none');
+  assert.notEqual(btn.style.display, 'none');
+  assert.equal(btn.dataset.state, 'correct');
   assert.equal(agent.lastProgress, 1);
 });
 
 // ─── 3. Wrong integer is attempted, retry-able ─────────────────────────────
 
-test('wrong answer records attempt, keeps input enabled, Check still visible', async () => {
+test('wrong answer records attempt, keeps input enabled, Check turns red', async () => {
   const { agent } = await setup(oneIntFixture());
   typeAndCheck('a-1', '18');
   const { model } = inspect();
@@ -147,7 +168,27 @@ test('wrong answer records attempt, keeps input enabled, Check still visible', a
   assert.equal(input.disabled, false);
   const btn = document.querySelector('.ximera-check-btn');
   assert.notEqual(btn.style.display, 'none');
+  assert.equal(btn.dataset.state, 'attempted');
   assert.equal(agent.lastProgress, 0);
+});
+
+// Editing the input after a wrong check clears the red badge until the
+// student presses Check again — but if they type back to the same wrong
+// value the badge reappears without a re-check. Matches original-server.
+test('incorrect state clears when input diverges, reappears on match', async () => {
+  await setup(oneIntFixture());
+  typeAndCheck('a-1', '18');
+  const btn = document.querySelector('.ximera-check-btn');
+  assert.equal(btn.dataset.state, 'attempted');
+
+  const input = document.querySelector('.ximera-answer-input');
+  input.value = '19';
+  input.dispatchEvent(new window.Event('input', { bubbles: true }));
+  assert.equal(btn.dataset.state, '');
+
+  input.value = '18';
+  input.dispatchEvent(new window.Event('input', { bubbles: true }));
+  assert.equal(btn.dataset.state, 'attempted');
 });
 
 // ─── 4. Float w/ tolerance ─────────────────────────────────────────────────
@@ -175,6 +216,36 @@ test('symbolic: x+x vs 2*x → correct', async () => {
   const { model } = inspect();
   assert.equal(model['a-3'].correct, true);
   assert.equal(model['p-3'].complete, true);
+});
+
+// ─── 5b. MathML-authored answer ────────────────────────────────────────────
+//
+// End-to-end: with data-correct-mathml populated (as mountPhaseB does in
+// production via MathJax.tex2mml), the CHECK reducer forwards the MathML
+// through to checkAnswer, which parses it via math-expressions.fromMml.
+// The student can type either LaTeX \sqrt{2} or the text form sqrt(2) and
+// still get credit.
+
+test('MathML: student sqrt(2) matches \\answer{\\sqrt{2}}', async () => {
+  await setup(sqrt2MathmlFixture());
+  typeAndCheck('a-5', 'sqrt(2)');
+  const { model } = inspect();
+  assert.equal(model['a-5'].correct, true);
+  assert.equal(model['p-5'].complete, true);
+});
+
+test('MathML: student \\sqrt{2} matches \\answer{\\sqrt{2}}', async () => {
+  await setup(sqrt2MathmlFixture());
+  typeAndCheck('a-5', '\\sqrt{2}');
+  const { model } = inspect();
+  assert.equal(model['a-5'].correct, true);
+});
+
+test('MathML: wrong student answer stays wrong', async () => {
+  await setup(sqrt2MathmlFixture());
+  typeAndCheck('a-5', 'sqrt(3)');
+  const { model } = inspect();
+  assert.equal(model['a-5'].correct, false);
 });
 
 // ─── 6. Focus guard ────────────────────────────────────────────────────────
@@ -210,7 +281,8 @@ test('persistence: correct-answer state survives JSON round-trip', async () => {
   assert.equal(input.disabled, true);
   assert.equal(input.value, '17');
   const btn = document.querySelector('.ximera-check-btn');
-  assert.equal(btn.style.display, 'none');
+  assert.notEqual(btn.style.display, 'none');
+  assert.equal(btn.dataset.state, 'correct');
 });
 
 // ─── 8. Reset behaves like first visit ─────────────────────────────────────

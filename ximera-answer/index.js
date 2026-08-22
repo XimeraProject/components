@@ -52,12 +52,24 @@ export function parseFormattedInput(format, input) {
   catch { try { return Expression.fromLatex(input); } catch { return undefined; } }
 }
 
-export function checkAnswer(response, correctText, format, tolerance) {
+// Prefer MathML for the correct side when we're in expression mode and MathJax
+// gave us MathML for the authored LaTeX. MathML is MathJax's own parse of the
+// TeX source, so constructs math-expressions' own fromLatex can't handle
+// (macros, spacing, environments) round-trip cleanly through it. Falls back
+// to the text/latex path when no MathML is available or parsing fails.
+export function parseCorrect(format, correctText, correctMathml) {
+  if ((format === undefined || format === 'expression') && correctMathml) {
+    try { return Expression.fromMml(correctMathml); } catch { /* fall through */ }
+  }
+  return parseFormattedInput(format, correctText);
+}
+
+export function checkAnswer(response, correctText, format, tolerance, correctMathml) {
   const student = parseFormattedInput(format, response);
   if (student === undefined) return false;
   if (typeof student === 'number' && Number.isNaN(student)) return false;
 
-  const correct = parseFormattedInput(format, correctText);
+  const correct = parseCorrect(format, correctText, correctMathml);
   if (correct === undefined) return false;
 
   const tol = tolerance === undefined || tolerance === '' ? undefined : Number(tolerance);
@@ -104,7 +116,9 @@ registerReducer('ximera-answer:CHECK', (model, msg) => {
   if (prev.correct === true) return model;                     // already locked
   const response = (prev.response ?? '').trim();
   if (response === '') return model;                           // no-op empty
-  const correct = checkAnswer(response, msg.correctText, msg.format, msg.tolerance);
+  const correct = checkAnswer(
+    response, msg.correctText, msg.format, msg.tolerance, msg.correctMathml,
+  );
   return {
     ...model,
     [msg.id]: {
@@ -120,38 +134,36 @@ registerReducer('ximera-answer:CHECK', (model, msg) => {
 // ─── Render ────────────────────────────────────────────────────────────────
 
 registerRender('.answer.respondable', (el, entry) => {
-  const btn = findCheckButton(el);
-  syncAnswerableState(el, entry, btn);
-
   const placeholder = el.dataset.placeholderId
     ? document.getElementById(el.dataset.placeholderId)
     : null;
+  const btn = placeholder?.querySelector('.ximera-check-btn') ?? null;
+
+  // Container follows the generic answerable state — the shared render
+  // logic (progress, CSS palettes) reads it. The button gets a stricter
+  // state: 'attempted' only when the current input still equals the value
+  // we last checked. Type something new and the incorrect badge clears;
+  // type back to the same wrong value and it reappears without needing
+  // another CHECK — matches original-server's math-answer chrome.
+  syncAnswerableState(el, entry);
+  if (btn) {
+    let s = '';
+    if (entry?.correct) s = 'correct';
+    else if (entry?.checked != null && entry.response === entry.checked) s = 'attempted';
+    btn.dataset.state = s;
+  }
+
   const input = placeholder?.querySelector('.ximera-answer-input');
   if (input) {
     focusGuardSyncValue(input, entry.response ?? '');
     input.disabled = !!entry.correct;
   }
 
-  if (btn) btn.style.display = entry.correct ? 'none' : '';
-
   if (entry.correct) {
     const popover = placeholder?.querySelector('.ximera-math-popover');
     if (popover) popover.hidden = true;
   }
 });
-
-function findCheckButton(answerEl) {
-  const wrapper = answerEl.closest('.ximera-math-with-answers');
-  let next = wrapper?.nextElementSibling;
-  while (next) {
-    if (next.classList?.contains('ximera-check-btn') && next.dataset.answerId === answerEl.id) {
-      return next;
-    }
-    if (!next.classList?.contains('ximera-check-btn')) break;
-    next = next.nextElementSibling;
-  }
-  return null;
-}
 
 // ─── Mount ─────────────────────────────────────────────────────────────────
 //
@@ -196,6 +208,22 @@ async function mountPhaseB(el, dispatchFn) {
     try { await mj.typesetPromise(); } catch { /* first-load races are fine */ }
   }
 
+  // Ask MathJax to parse the authored correct-LaTeX into MathML — it's the
+  // same TeX parser that just typeset the phantom, so it handles macros
+  // math-expressions' own fromLatex cannot. The reducer prefers this MathML
+  // over the raw LaTeX when checking equality. tex2mml is synchronous once
+  // startup.promise resolves; wrap the call defensively so a bad TeX source
+  // (or an environment without tex2mml — happy-dom, older MathJax) falls
+  // through to the LaTeX path.
+  if (mj && typeof mj.tex2mml === 'function' && el.dataset.correctText && !el.dataset.correctMathml) {
+    try {
+      const mml = mj.tex2mml(el.dataset.correctText, { display: false });
+      if (typeof mml === 'string' && mml.trim() !== '') {
+        el.dataset.correctMathml = mml;
+      }
+    } catch { /* leave data-correct-mathml unset; equality falls back */ }
+  }
+
   const placeholder = document.getElementById(el.dataset.placeholderId);
   if (!placeholder) {
     console.warn(
@@ -211,30 +239,44 @@ async function mountPhaseB(el, dispatchFn) {
   placeholder.style.position = placeholder.style.position || 'relative';
   placeholder.style.display = placeholder.style.display || 'inline-block';
   placeholder.style.visibility = 'hidden';
+  // The phantom sizes to the answer text ("17" ≈ 1em), which leaves no
+  // room for the input + Check button pair. Widen it so the flex group
+  // has usable horizontal space; the min-width doesn't affect layout on
+  // longer answers where the phantom already exceeds it.
+  placeholder.style.minWidth = '10em';
 
-  const rect = typeof placeholder.getBoundingClientRect === 'function'
-    ? placeholder.getBoundingClientRect()
-    : { height: 0 };
+  // Input + Check button ride together in a flex group that overlays the
+  // hidden \phantom. The group is a sibling of the placeholder's contents
+  // but positioned absolutely inside it so the phantom's baseline anchors
+  // the whole assembly to the surrounding math. Original-server used
+  // Bootstrap's .input-group for the same effect.
+  const group = document.createElement('span');
+  group.className = 'ximera-input-group';
+  group.style.visibility = 'visible';
+  placeholder.appendChild(group);
 
   const input = document.createElement('input');
   input.type = 'text';
   input.className = 'ximera-answer-input';
   input.setAttribute('aria-label', 'answer');
   input.dataset.answerId = el.id;
-  input.style.visibility = 'visible';   // input shows over the hidden phantom
-  if (rect.height) input.style.height = `${rect.height}px`;
-  placeholder.appendChild(input);
+  // The placeholder is visibility:hidden so MathJax's phantom doesn't
+  // paint over our chrome; the group re-declares visibility:visible so
+  // its children paint. Without this explicit setting on the input,
+  // browsers treat it as "should inherit hidden" for focus purposes —
+  // keystrokes bypass the input and MathJax 4's Explorer beeps at them.
+  input.style.visibility = 'visible';
+  // Height is intentionally NOT set inline: align-items: stretch on the
+  // group sizes the input to the row height, and browsers center text
+  // vertically in an <input> when the height comes from layout. Setting
+  // height inline from placeholder.getBoundingClientRect().height would
+  // stretch the input past its line-height and push text to the top.
+  group.appendChild(input);
 
-  const popover = document.createElement('div');
-  popover.className = 'ximera-math-popover';
-  popover.setAttribute('role', 'tooltip');
-  popover.hidden = true;
-  placeholder.appendChild(popover);
-
-  const wrapper = el.closest('.ximera-math-with-answers');
   const checkExtras = {
     id: el.id,
     correctText: el.dataset.correctText ?? '',
+    correctMathml: el.dataset.correctMathml ?? '',
     format: el.dataset.format,
     tolerance: el.dataset.tolerance,
   };
@@ -246,7 +288,13 @@ async function mountPhaseB(el, dispatchFn) {
     ariaLabel: 'check work',
     attrs: { 'data-answer-id': el.id },
   });
-  wrapper?.parentNode?.insertBefore(btn, wrapper.nextSibling);
+  group.appendChild(btn);
+
+  const popover = document.createElement('div');
+  popover.className = 'ximera-math-popover';
+  popover.setAttribute('role', 'tooltip');
+  popover.hidden = true;
+  placeholder.appendChild(popover);
 
   const doCheck = () => dispatchFn({ type: 'ximera-answer:CHECK', ...checkExtras });
 
@@ -273,6 +321,10 @@ async function mountPhaseB(el, dispatchFn) {
   input.addEventListener('focusin', isolate);
   input.addEventListener('keyup', isolate);
   input.addEventListener('keypress', isolate);
+  // The Check button rides inside the same mjx-container as the input, so
+  // Explorer would swallow its click without this.
+  btn.addEventListener('mousedown', isolate);
+  btn.addEventListener('click', isolate);
 
   input.addEventListener('keydown', (event) => {
     event.stopPropagation();
@@ -297,7 +349,9 @@ async function mountPhaseB(el, dispatchFn) {
   if (entry?.response) input.value = entry.response;
   if (entry?.correct) {
     input.disabled = true;
-    btn.style.display = 'none';
+    btn.dataset.state = 'correct';
+  } else if (entry?.checked != null && entry.response === entry.checked) {
+    btn.dataset.state = 'attempted';
   }
 }
 

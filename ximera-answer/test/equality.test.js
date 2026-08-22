@@ -31,3 +31,80 @@ for (const [response, correctText, format, tolerance, expected, label] of rows) 
     assert.equal(checkAnswer(response, correctText, format, tolerance), expected);
   });
 }
+
+// ─── MathML path ───────────────────────────────────────────────────────────
+//
+// When MathJax has parsed the authored correct-LaTeX at mount time, the
+// resulting MathML is what checkAnswer should treat as the correct side —
+// math-expressions.fromMml handles constructs its own fromLatex mishandles
+// (e.g. \sqrt{2}).
+
+const SQRT2_MML = '<math><msqrt><mn>2</mn></msqrt></math>';
+const FRAC_1_SQRT2_MML =
+  '<math><mfrac><mn>1</mn><msqrt><mn>2</mn></msqrt></mfrac></math>';
+
+test('MathML: student \\sqrt{2} matches MathML-derived correct answer', () => {
+  assert.equal(
+    checkAnswer('\\sqrt{2}', '\\sqrt{2}', undefined, undefined, SQRT2_MML),
+    true,
+  );
+});
+
+test('MathML: student sqrt(2) matches MathML-derived correct answer', () => {
+  assert.equal(
+    checkAnswer('sqrt(2)', '\\sqrt{2}', undefined, undefined, SQRT2_MML),
+    true,
+  );
+});
+
+test('MathML: nested \\frac{1}{\\sqrt{2}} matches equivalent text 1/sqrt(2)', () => {
+  assert.equal(
+    checkAnswer('1/sqrt(2)', '\\frac{1}{\\sqrt{2}}', undefined, undefined, FRAC_1_SQRT2_MML),
+    true,
+  );
+});
+
+test('MathML: wrong student answer still rejected', () => {
+  assert.equal(
+    checkAnswer('sqrt(3)', '\\sqrt{2}', undefined, undefined, SQRT2_MML),
+    false,
+  );
+});
+
+test('MathML: honored only in expression mode — float format ignores MathML', () => {
+  // In float mode the correct side is a Number, not an Expression. Passing a
+  // MathML string must not derail that path.
+  assert.equal(
+    checkAnswer('1.414', '1.414', 'float', undefined, SQRT2_MML),
+    true,
+  );
+});
+
+test('MathML: empty correctMathml falls back to LaTeX path', () => {
+  // \sqrt{2} through fromLatex; equivalent student input via text.
+  assert.equal(
+    checkAnswer('sqrt(2)', '\\sqrt{2}', undefined, undefined, ''),
+    true,
+  );
+});
+
+test('MathML: garbage MathML falls through to LaTeX path (no throw)', () => {
+  assert.equal(
+    checkAnswer('sqrt(2)', '\\sqrt{2}', undefined, undefined, '<not-mathml>'),
+    true,
+  );
+});
+
+test('parseCorrect: prefers MathML over correctText when both usable', () => {
+  // Deliberately mismatched correctText and MathML to prove MathML wins:
+  // correctText parses as 99, MathML parses as sqrt(2). Student "sqrt(2)"
+  // must match — i.e. the MathML side is what was consulted.
+  assert.equal(
+    checkAnswer('sqrt(2)', '99', undefined, undefined, SQRT2_MML),
+    true,
+  );
+  assert.equal(
+    checkAnswer('99', '99', undefined, undefined, SQRT2_MML),
+    false,
+  );
+});

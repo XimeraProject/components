@@ -2,7 +2,7 @@
 % Loaded from ximera-video.sty inside \ifdefined\HCode.
 %
 % xourse context: \youtube renders as a plain link (course-outline page).
-% ximera context: \youtube renders as a responsive privacy-friendly iframe.
+% ximera context: \youtube renders as a responsive iframe (standard YouTube embed).
 
 \@ifclassloaded{xourse}{%
   \renewcommand\youtube[1]{%
@@ -13,7 +13,7 @@
 }{%
   \renewcommand{\youtube}[1]{%
     \ifvmode \IgnorePar\fi \EndP
-    \HCode{<div class="ximera-video"><iframe src="https://www.youtube-nocookie.com/embed/#1" title="YouTube video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe></div>}%
+    \HCode{<div class="ximera-video"><iframe src="https://www.youtube.com/embed/#1" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>}%
   }%
 }
 

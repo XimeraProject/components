@@ -86,6 +86,12 @@
     "Computer Modern Serif", "CMU Serif",
     "STIX Two Text", "STIXGeneral",
     Georgia, "Times New Roman", Times, serif;
+
+  /* Sans-serif stack — used for chrome labels (env titles, callouts)
+     where we want a clear visual break from the serif body. */
+  --ximera-font-sans:
+    system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
 }
 
 /* ─── MathJax_NewCM webfont — same woff2 files MathJax 4 CHTML loads ─────── */
@@ -173,6 +179,47 @@ body h1, body h2, body h3, body h4 {
   margin-right: 0.4em;
 }
 
+/* Env name shown as a bold sans-serif label on the first line
+   (Theorem, Definition, Example, …). Colored to match the family
+   palette by the group blocks below. Proof intentionally omits a
+   label — its "Proof." prelude and ∎ terminal handle the framing. */
+.theorem-like::before {
+  font-family: var(--ximera-font-sans);
+  font-weight: 700;
+  font-size: 0.95em;
+  margin-right: 0.4em;
+}
+
+.theorem-like.theorem::before      { content: "Theorem"; }
+.theorem-like.corollary::before    { content: "Corollary"; }
+.theorem-like.lemma::before        { content: "Lemma"; }
+.theorem-like.proposition::before  { content: "Proposition"; }
+.theorem-like.claim::before        { content: "Claim"; }
+.theorem-like.conjecture::before   { content: "Conjecture"; }
+.theorem-like.criterion::before    { content: "Criterion"; }
+.theorem-like.fact::before         { content: "Fact"; }
+.theorem-like.formula::before      { content: "Formula"; }
+
+.theorem-like.definition::before   { content: "Definition"; }
+.theorem-like.notation::before     { content: "Notation"; }
+.theorem-like.example::before      { content: "Example"; }
+.theorem-like.procedure::before    { content: "Procedure"; }
+.theorem-like.algorithm::before    { content: "Algorithm"; }
+.theorem-like.model::before        { content: "Model"; }
+.theorem-like.template::before     { content: "Template"; }
+
+.theorem-like.remark::before       { content: "Remark"; }
+.theorem-like.observation::before  { content: "Observation"; }
+.theorem-like.idea::before         { content: "Idea"; }
+.theorem-like.summary::before      { content: "Summary"; }
+.theorem-like.explanation::before  { content: "Explanation"; }
+.theorem-like.conclusion::before   { content: "Conclusion"; }
+.theorem-like.condition::before    { content: "Condition"; }
+.theorem-like.axiom::before        { content: "Axiom"; }
+
+.theorem-like.warning::before      { content: "Warning"; }
+.theorem-like.paradox::before      { content: "Paradox"; }
+
 /* Blue — formal statements. `.problem-environment.problem` joins this
    group so an ungraded `\begin{problem}` looks like a theorem-family
    box; the completion rule below repaints the border green when done. */
@@ -197,7 +244,16 @@ body h1, body h2, body h3, body h4 {
 .theorem-like.conjecture > .theorem-like-title,
 .theorem-like.criterion > .theorem-like-title,
 .theorem-like.fact > .theorem-like-title,
-.theorem-like.formula > .theorem-like-title {
+.theorem-like.formula > .theorem-like-title,
+.theorem-like.theorem::before,
+.theorem-like.corollary::before,
+.theorem-like.lemma::before,
+.theorem-like.proposition::before,
+.theorem-like.claim::before,
+.theorem-like.conjecture::before,
+.theorem-like.criterion::before,
+.theorem-like.fact::before,
+.theorem-like.formula::before {
   color: var(--ximera-color-env-thm);
 }
 
@@ -218,7 +274,14 @@ body h1, body h2, body h3, body h4 {
 .theorem-like.procedure > .theorem-like-title,
 .theorem-like.algorithm > .theorem-like-title,
 .theorem-like.model > .theorem-like-title,
-.theorem-like.template > .theorem-like-title {
+.theorem-like.template > .theorem-like-title,
+.theorem-like.definition::before,
+.theorem-like.notation::before,
+.theorem-like.example::before,
+.theorem-like.procedure::before,
+.theorem-like.algorithm::before,
+.theorem-like.model::before,
+.theorem-like.template::before {
   color: var(--ximera-color-env-def);
 }
 
@@ -241,7 +304,15 @@ body h1, body h2, body h3, body h4 {
 .theorem-like.explanation > .theorem-like-title,
 .theorem-like.conclusion > .theorem-like-title,
 .theorem-like.condition > .theorem-like-title,
-.theorem-like.axiom > .theorem-like-title {
+.theorem-like.axiom > .theorem-like-title,
+.theorem-like.remark::before,
+.theorem-like.observation::before,
+.theorem-like.idea::before,
+.theorem-like.summary::before,
+.theorem-like.explanation::before,
+.theorem-like.conclusion::before,
+.theorem-like.condition::before,
+.theorem-like.axiom::before {
   color: var(--ximera-color-env-rem);
 }
 
@@ -252,7 +323,9 @@ body h1, body h2, body h3, body h4 {
   background: var(--ximera-color-env-warn-bg);
 }
 .theorem-like.warning > .theorem-like-title,
-.theorem-like.paradox > .theorem-like-title {
+.theorem-like.paradox > .theorem-like-title,
+.theorem-like.warning::before,
+.theorem-like.paradox::before {
   color: var(--ximera-color-env-warn);
 }
 

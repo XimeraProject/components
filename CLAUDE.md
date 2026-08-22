@@ -6,13 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository overview
 
-This workspace is the active development area for a new npm-based Ximera build system. Ximera is an open-source platform for turning LaTeX-authored course materials into interactive web pages. The workspace contains four main pieces:
+This workspace is the active development area for a new npm-based Ximera build system. Ximera is an open-source platform for turning LaTeX-authored course materials into interactive web pages. The workspace contains three main pieces:
 
 | Directory | Role |
 |-----------|------|
 | `tex4npm/` | The build tool — compiles `.tex` → HTML (analogous to webpack for LaTeX) |
-| `ximera-core/` | Client-side JS runtime — MVU framework for interactive HTML elements |
-| `ximeraLatex/` | The LaTeX package (`ximera.cls`, `xourse.cls`) and legacy build tools |
+| `ximera-core/` | Client-side JS runtime **and** the LaTeX class + tex4ht config (`.dtx` sources under `latex/`, compiled to `latex/dist/*.cls`/`.4ht`/`.cfg` by `npm run build:latex`) |
 | `original-server/` | Legacy jQuery client-side code — reference implementation being replaced by `ximera-core` |
 
 `my-course/` and `my-button/` are working examples of the author-facing npm workflow.
@@ -38,7 +37,14 @@ npm run build      # tex4npm build — compile dirty .tex files to dist/
 npm run dev        # tex4npm watch — incremental watch mode
 ```
 
-External tools required on `PATH`: `pdflatex`, `latex`, `tex4ht`, `t4ht` (from `tlmgr install tex4ht`), and optionally `sage`.
+On a fresh clone, `ximera-core/latex/dist/` is empty (it's gitignored). Bootstrap it once with:
+
+```bash
+cd ximera-core
+npm run build:latex   # extract .cls/.4ht/.cfg from .dtx sources into latex/dist/
+```
+
+External tools required on `PATH`: `pdflatex`, `latex`, `tex4ht`, `t4ht` (from `tlmgr install tex4ht`), `makeindex`, and optionally `sage`.
 
 ---
 
@@ -125,11 +131,11 @@ State is persisted via `@modulus-learning/agent` (`agent.setPageState()` / `agen
 
 Third-party ximera npm packages add custom interactive components by calling `register(cssSelector, mountFn)`. After the agent is ready and the built-in components are mounted, `index.js` iterates the registry and calls each `mountFn(element, dispatch)`.
 
-### ximeraLatex
+### ximera-core's LaTeX side
 
-`ximeraLatex/` is the upstream source for `ximera.cls`, `xourse.cls`, `ximera.4ht`, and `xourse.4ht`. The `.4ht` files are the tex4ht configuration that tells it how to convert Ximera-specific LaTeX environments (`\begin{problem}`, `\begin{multipleChoice}`, `\answer{}`, etc.) into the specific HTML class structure that `ximera-core` and the CSS expect.
+Alongside its JS runtime, `ximera-core/` owns the LaTeX class and tex4ht config: docstrip `.dtx` sources under `ximera-core/latex/`, extracted by `make` (via `npm run build:latex`) into `ximera-core/latex/dist/{ximera,xourse}.{cls,4ht}` and `ximera.cfg`. The `.4ht` files are the tex4ht configuration that tells it how to convert Ximera-specific LaTeX environments (`\begin{problem}`, `\begin{multipleChoice}`, `\answer{}`, etc.) into the specific HTML class structure that the JS runtime and CSS expect. Per-component macros (`\answer`, choice environments, etc.) live in their own pilot packages' `.sty`/`.4ht` files, not in this class.
 
-It also contains `luaxake` — a Lua reimplementation of the old Go `xake` build tool, used inside Docker containers via the `xmlatex` bash wrapper. `tex4npm` is a separate, parallel approach to the same problem from the npm ecosystem direction.
+`ximera-core/package.json`'s `latex` field lists the compiled artifacts (`latex/dist/*.cls`, `latex/dist/*.4ht`, `latex/dist/ximera.cfg`) so `tex4npm/src/stage.js` symlinks them into every course's `.tex4npm/texmf/` before LaTeX compilation. `dist/` is gitignored and shipped in the npm tarball; a `prepare` npm script rebuilds it before `npm publish`.
 
 ### original-server/ — legacy reference implementation
 

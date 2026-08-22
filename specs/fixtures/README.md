@@ -1,6 +1,6 @@
 # Fixtures
 
-Compilable `.tex` sources — one per row of the v1 roster in `PLAN.md` §4. Each fixture is the mount target for its component's conformance tests (see the spec's Examples section under `specs/components/<name>.md`) and, in Phase 5, becomes the golden-file oracle when the LaTeX macros migrate out of `ximeraLatex/` into per-package `.sty` files.
+Compilable `.tex` sources — one per row of the v1 roster in `PLAN.md` §4. Each fixture is the mount target for its component's conformance tests (see the spec's Examples section under `specs/components/<name>.md`) and, in Phase 5, becomes the golden-file oracle when the LaTeX macros migrate out of the base class in `ximera-core/latex/` into per-package `.sty` files.
 
 ## Building
 
@@ -10,7 +10,7 @@ npm install       # first time only — symlinks tex4npm and ximera-core from th
 npm run build     # compiles every *.tex into dist/*.html
 ```
 
-External tools on `PATH`: `pdflatex`, `latex`, `tex4ht`, `t4ht`. `ximera.cls` MUST be installed in the user's texmf tree (see `ximeraLatex/installingLocally.md`).
+External tools on `PATH`: `pdflatex`, `latex`, `tex4ht`, `t4ht`, `makeindex`. `ximera.cls` is produced by `cd ximera-core && npm run build:latex` (once per fresh clone) and staged into the fixtures' TeX tree automatically by `tex4npm`.
 
 ## Fixtures
 
@@ -26,5 +26,5 @@ External tools on `PATH`: `pdflatex`, `latex`, `tex4ht`, `t4ht`. `ximera.cls` MU
 
 ## Notes
 
-- The fixtures use only stock `ximeraLatex` macros. They do not `\usepackage{ximera-hint}` or similar — those npm packages own their JavaScript, but the LaTeX macros (`\begin{hint}`, `\wordChoice{…}`, `\begin{multipleChoice}`, etc.) come from `ximera.cls` today. Phase 5 optionally migrates macros into per-package `.sty` files; when it does, this workspace's `package.json` will grow those dependencies.
+- The fixtures use only stock base-class macros. They do not `\usepackage{ximera-hint}` or similar — those npm packages own their JavaScript, but the LaTeX macros (`\begin{hint}`, `\wordChoice{…}`, `\begin{multipleChoice}`, etc.) come from `ximera.cls` (built from `ximera-core/latex/*.dtx`) today. Phase 5 optionally migrates macros into per-package `.sty` files; when it does, this workspace's `package.json` will grow those dependencies.
 - The `\answer[format=…,tolerance=…]{…}` options are silently dropped by the current `ximera.4ht` emission (only the value survives). Phase 4 (owner: `ximera-answer/postprocess.js`) adds the `data-format` / `data-tolerance` pass-through by parsing the `.tex` source alongside the compiled HTML. Fixtures record the *authored* form; the DOM they produce today lacks those attributes.

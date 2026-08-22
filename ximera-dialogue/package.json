@@ -1,0 +1,10 @@
+{
+  "name": "ximera-dialogue",
+  "version": "0.1.0",
+  "type": "module",
+  "latex": {
+    "sty": ["dialogue.sty"],
+    "4ht": ["dialogue.4ht"],
+    "css": ["ximera-dialogue.css"]
+  }
+}

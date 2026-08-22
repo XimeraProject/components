@@ -9,10 +9,20 @@
     "./*.css": "./*.css"
   },
   "latex": {
+    "cls": ["latex/dist/ximera.cls", "latex/dist/xourse.cls"],
+    "4ht": ["latex/dist/ximera.4ht", "latex/dist/xourse.4ht"],
+    "cfg": ["latex/dist/ximera.cfg"],
     "css": ["ximera-core.css"]
   },
+  "files": [
+    "*.js",
+    "*.css",
+    "latex/dist/**"
+  ],
   "scripts": {
-    "test": "node --test 'test/**/*.test.js'"
+    "test": "node --test 'test/**/*.test.js'",
+    "build:latex": "cd latex && make",
+    "prepare": "npm run build:latex"
   },
   "dependencies": {
     "@modulus-learning/agent": "*"

@@ -1,0 +1,19 @@
+% dialogue.4ht — tex4ht hooks for the dialogue environment.
+% Loaded from dialogue.sty inside \ifdefined\HCode.
+%
+% Emits a <dl class="dialogue"> where each speaker's name becomes
+% <dt class="actor"> and each line becomes <dd class="speech">.
+
+\renewenvironment{dialogue}{\begin{description}}{\end{description}}
+
+\ConfigureList{dialogue}%
+   {\EndP\HCode{<dl \a:LRdir class="dialogue">}%
+      \PushMacro\end:itm
+\global\let\end:itm=\empty}
+   {\PopMacro\end:itm \global\let\end:itm \end:itm
+\EndP\HCode{</dd></dl>}\ShowPar}
+   {\end:itm \global\def\end:itm{\EndP\Tg</dd>}\HCode{<dt
+        class="actor">}\bgroup \bf}
+   {\egroup\EndP\HCode{</dt><dd\Hnewline class="speech">}}
+
+\endinput

@@ -14,8 +14,7 @@
     "ximera-hint": "*",
     "ximera-multiple-choice": "*",
     "ximera-select-all": "*",
-    "ximera-word-choice": "*",
-    "ximeralatex": "*"
+    "ximera-word-choice": "*"
   },
   "type": "module"
 }

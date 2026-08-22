@@ -19,8 +19,7 @@ The four workspaces have distinct responsibilities:
 | Directory | Role | Analogy |
 |-----------|------|---------|
 | `tex4npm/` | Build system: `.tex` → HTML, plus esbuild bundle of component JS/CSS | webpack |
-| `ximeraLatex/` | LaTeX classes + tex4ht configuration (`ximera.cls`, `xourse.cls`, `ximera.4ht`) | React (rendering framework) |
-| `ximera-core/` | Client-side MVU runtime; owns the model, reducer, renderer, progress | Redux + React DOM |
+| `ximera-core/` | Client-side MVU runtime (model, reducer, renderer, progress) **plus** the base LaTeX class + tex4ht config (`ximera.cls`, `xourse.cls`, `ximera.4ht` — extracted from `latex/*.dtx` sources into `latex/dist/`) | Redux + React DOM + React framework |
 | `my-button/` (and future `ximera-*` packages) | Dual LaTeX + JS npm packages defining interactive components | React components |
 | `original-server/` | Legacy jQuery client — reference only, being replaced | — |
 | `app.modulus-learning.org/` | LTI 1.3 tool: authenticated persistence, progress, LMS score passback | (external) backend |
@@ -218,8 +217,8 @@ ximera-two/
 │   ├── bin/tex4npm.js       CLI entry
 │   └── src/                 cli, config, discover, deps, graph, dirty, compile,
 │                            artifacts, postprocess, bundle, stage, watch (+ tests)
-├── ximeraLatex/             LaTeX classes + tex4ht config (ximera.cls, ximera.4ht, xourse.*)
 ├── ximera-core/             MVU runtime (index, model, update, render, progress)
+│   └── latex/               .dtx sources → dist/{ximera,xourse}.{cls,4ht}, ximera.cfg
 ├── my-button/               minimal dual LaTeX+JS component (\button macro + click hook)
 ├── my-course/               example course consuming the above via npm
 ├── original-server/         legacy jQuery client (reference only)

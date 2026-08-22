@@ -1,0 +1,12 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{dialogue}[2026/08/22 v0.1 Ximera dialogue environment]
+
+\newenvironment{dialogue}{%
+   \renewcommand\descriptionlabel[1]{\hspace{\labelsep}\textbf{##1:}}
+   \begin{description}%
+}{%
+   \end{description}%
+}
+
+\ifdefined\HCode\input{dialogue.4ht}\fi
+\endinput

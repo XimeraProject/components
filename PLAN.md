@@ -141,11 +141,11 @@ Work: port the D8 comparison engine with the Phase 0 equality fixtures as the ac
 Exit criteria: full v1 roster (kernel + six packages) published; `grep` proves tex4npm and core contain no component-specific code; every Phase 0 equality fixture passes; the integration suite covers all specs end-to-end on `my-course`.
 
 ### Phase 5 — LaTeX-side migration (per component, optional)
-*Goal: move component macros out of `ximeraLatex` where it pays.*
+*Goal: move component macros out of the base class where it pays.*
 
 Work, per component: move macros + tex4ht hooks into the package's `.sty`/`.4ht` (using D5's `"4ht"` support); deprecation shim in `ximera.cls` that warns on double definition; verify against the Phase 0 golden HTML and the PDF branch (`\ifdefined\HCode`).
 
-Exit criteria, per migrated component: golden files byte-identical; PDF output unchanged; mismatched `ximeraLatex`/package versions warn rather than silently break. Components deeply entangled with `ximera.4ht` internals may stay put indefinitely — the contract allows it.
+Exit criteria, per migrated component: golden files byte-identical; PDF output unchanged; mismatched `ximera-core`/package versions warn rather than silently break. Components deeply entangled with `ximera.4ht` internals may stay put indefinitely — the contract allows it. (The base class + tex4ht config now live in `ximera-core/latex/` as `.dtx` sources, extracted to `ximera-core/latex/dist/`.)
 
 ### Phase 6 — Ecosystem
 *Goal: make the seventh component someone else's afternoon project.*

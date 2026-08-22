@@ -442,8 +442,8 @@ Every `ximera-*` package ships:
 ```
 ximera-<name>/
 ├── package.json         "latex" field: {"sty": [...], "4ht": [...], "css": [...],
-│                                        "cls": [...] (ximeraLatex only),
-│                                        "cfg": [...] (ximeraLatex only),
+│                                        "cls": [...] (ximera-core only),
+│                                        "cfg": [...] (ximera-core only),
 │                                        "postprocess": "./postprocess.js" (optional)}
 │                        "peerDependencies": { "ximera-core": "^1.0.0" }
 ├── <name>.sty           LaTeX-side rendering. Ends with
@@ -460,7 +460,7 @@ ximera-<name>/
 
 The `"latex"` field is what makes the package participate in the tex4npm build (see `ARCHITECTURE.md` → "The dual LaTeX + JS package convention").
 
-Each of `"sty"`, `"4ht"`, `"cls"`, `"cfg"` is a list of relative paths to TeX-searchable files that tex4npm symlinks into `.tex4npm/texmf/tex/latex/` before compilation. Filenames must be unique across all installed packages (tex4npm throws on collision). The `"cls"` and `"cfg"` fields are for LaTeX class files (`.cls`) and tex4ht config files (`.cfg`); in practice only `ximeraLatex` declares them. Packages without a JS entry point (no `main`/`exports`/`module`) are still valid — tex4npm skips the JS bundle import for them but still stages their TeX assets.
+Each of `"sty"`, `"4ht"`, `"cls"`, `"cfg"` is a list of relative paths to TeX-searchable files that tex4npm symlinks into `.tex4npm/texmf/tex/latex/` before compilation. Filenames must be unique across all installed packages (tex4npm throws on collision). The `"cls"` and `"cfg"` fields are for LaTeX class files (`.cls`) and tex4ht config files (`.cfg`); in practice only `ximera-core` declares them (its `latex/dist/{ximera,xourse}.cls` and `latex/dist/ximera.cfg`, extracted from `.dtx` sources by `npm run build:latex`). Packages without a JS entry point (no `main`/`exports`/`module`) are still valid — tex4npm skips the JS bundle import for them but still stages their TeX assets.
 
 Author-facing use: an author writing a course must `\usepackage{<name>}` for every pilot they consume (e.g. `\usepackage{answer}`, `\usepackage{hint}`). `ximera.cls` no longer bundles pilot macros; each pilot owns its own `.sty` + `.4ht`.
 
@@ -491,7 +491,7 @@ This addition is **semver-minor** for tex4npm and **not part of the kernel contr
 - **Message payload structure** — beyond the `type` string and the namespacing rule, kernel is agnostic.
 - **How a component computes correctness** — a component decides, then sets `complete: true`. `ximera-answer` uses `math-expressions` (D8); others read the DOM's `.correct` class.
 - **Which components exist** — the v1 roster is in PLAN.md §4; v2+ opens after Phase 6.
-- **What the LaTeX macros look like** — that's `ximeraLatex` / per-package `.sty`.
+- **What the LaTeX macros look like** — that's `ximera-core/latex/` (base class + tex4ht config) / per-package `.sty`.
 
 ---
 

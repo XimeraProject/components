@@ -1,6 +1,5 @@
 # Nested git repositories — each keeps its own history.
 /tex4npm/
-/ximeraLatex/
 /app.modulus-learning.org/
 
 # npm build output

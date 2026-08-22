@@ -9,6 +9,7 @@
 \usepackage{multiple-choice}
 \usepackage{word-choice}
 \usepackage{select-all}
+\usepackage{dialogue}
 
 \begin{document}
 
@@ -46,16 +47,37 @@ Demonstration of every v1 pilot: \texttt{ximera-hint}, \texttt{ximera-word-choic
 \end{problem}
 
 \begin{problem}
-  A common approximation to $\sqrt{2}$, correct to two decimal places, is
+Here is a problem with a subproblem.
+  First, $1+1 = \answer{2}$.
+
+\begin{problem}
+And then $1+1+1 = \answer{3}$.
+\end{problem}
+
+\end{problem}
+
+\begin{problem}
+ A common approximation to $\sqrt{2}$, correct to two decimal places, is
   \[
     \sqrt{2} \approx \answer[format=float,tolerance=0.01]{1.414}.
   \]
+
+But exactly,
+  \[
+    \sqrt{2} = \sqrt{\answer{2}}.
+  \]
+
+Or another thing would be
+  \[
+    \sqrt{1+1} = \answer{\sqrt{2}}.
+  \]
+
 \end{problem}
 
 \begin{problem}
   The capital of Ohio is \wordChoice{%
-    \choice{Cleveland}%
-    \choice[correct]{Columbus}%
+    \choice{Cleveland and $\sqrt{2}$}%
+    \choice[correct]{Columbus with $\cos 45$}%
     \choice{Cincinnati}%
   }.
 \end{problem}
@@ -65,8 +87,8 @@ Demonstration of every v1 pilot: \texttt{ximera-hint}, \texttt{ximera-word-choic
   \begin{multipleChoice}
     \choice{4}
     \choice{6}
-    \choice[correct]{7}
-    \choice{9}
+    \choice[correct]{$1+\sqrt{256}$}
+    \choice{$3^2$}
   \end{multipleChoice}
 \end{problem}
 
@@ -87,5 +109,13 @@ Demonstration of every v1 pilot: \texttt{ximera-hint}, \texttt{ximera-word-choic
     Write your explanation here.
   \end{freeResponse}
 \end{problem}
+
+\begin{dialogue}
+  \item[Alice] I've been thinking about $\sqrt{2}$.
+  \item[Bob] What about it?
+  \item[Alice] It's irrational, but I can approximate it: $\sqrt{2} \approx 1.414$.
+  \item[Bob] Prove it's irrational!
+  \item[Alice] Suppose $\sqrt{2} = p/q$ in lowest terms. Then $2q^2 = p^2$, so $p$ is even, so $p^2$ is divisible by 4, so $q^2$ is even too --- contradicting lowest terms.
+\end{dialogue}
 
 \end{document}

@@ -1,0 +1,36 @@
+/* ximera-dialogue — styling for the \begin{dialogue} environment.
+
+   tex4ht emits <dl class="dialogue"> with alternating
+   <dt class="actor">Speaker</dt><dd class="speech">Line…</dd>.
+
+   Layout mirrors original-stylesheets/dialogue.scss: on wide screens
+   (>=48em) each row is a 2:10 grid — the speaker name sits in the
+   narrow left column (right-aligned, so it hugs the speech beside
+   it), the line in the wide right column. On narrow screens the
+   grid collapses and dt/dd stack naturally (browser default). */
+
+.dialogue {
+  margin: 18pt 0;
+}
+
+.dialogue .actor {
+  font-weight: bold;
+}
+
+.dialogue .speech {
+  margin: 0;
+}
+
+@media (min-width: 48em) {
+  .dialogue {
+    display: grid;
+    grid-template-columns: 2fr 10fr;
+    column-gap: 1em;
+    row-gap: 0.5em;
+    align-items: baseline;
+  }
+
+  .dialogue .actor {
+    text-align: right;
+  }
+}

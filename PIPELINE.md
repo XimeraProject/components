@@ -14,7 +14,7 @@ Xake is a build orchestrator. It does **not** do the actual TeX conversion itsel
 | `htlatex` | TeX→HTML conversion (from the `tex4ht` package) |
 | `sage` | Optional: execute SageMath embedded computations |
 | `kpsewhich` | Verify `ximera.cls` is installed |
-| `ximera.cls` | LaTeX document class (from [XimeraProject/ximeraLatex](https://github.com/XimeraProject/ximeraLatex)) |
+| `ximera.cls` | LaTeX document class — built from `.dtx` sources in `ximera-core/latex/` via `npm run build:latex` |
 
 Install TeX4ht via your TeX distribution: `tlmgr install tex4ht`
 
@@ -136,12 +136,16 @@ After compilation, for each `.tex` file the outputs published are:
 To replicate this in CI without Go/xake:
 
 ```yaml
-- name: Install TeX Live + ximera.cls
+- name: Install TeX Live
+  run: sudo apt-get install -y texlive-full
+
+- name: Build ximera-core LaTeX class
   run: |
-    sudo apt-get install -y texlive-full
-    mkdir -p ~/texmf/tex/latex
-    git clone https://github.com/XimeraProject/ximeraLatex ~/texmf/tex/latex/ximera
-    mktexlsr
+    cd ximera-core
+    npm install
+    npm run build:latex     # populates latex/dist/{ximera,xourse}.{cls,4ht}, ximera.cfg
+    # tex4npm's stage.js symlinks these into each course's .tex4npm/texmf/
+    # at build time; no need to install into ~/texmf/.
 
 - name: Compile each .tex file
   run: |

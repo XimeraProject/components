@@ -10,12 +10,12 @@
     "ximera-answer": "*",
     "ximera-choice-util": "*",
     "ximera-core": "*",
+    "ximera-dialogue": "*",
     "ximera-free-response": "*",
     "ximera-hint": "*",
     "ximera-multiple-choice": "*",
     "ximera-select-all": "*",
-    "ximera-word-choice": "*",
-    "ximeralatex": "*"
+    "ximera-word-choice": "*"
   },
   "type": "module"
 }

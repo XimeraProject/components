@@ -1,0 +1,8 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{ximera-video}[2026/08/22 v0.1 Ximera YouTube video embed]
+
+% Print fallback: display a plain URL.
+\newcommand{\youtube}[1]{YouTube: \url{https://www.youtube.com/watch?v=#1}}
+
+\ifdefined\HCode\input{ximera-video.4ht}\fi
+\endinput

@@ -1,0 +1,20 @@
+% ximera-video.4ht — tex4ht hooks for the ximera-video package.
+% Loaded from ximera-video.sty inside \ifdefined\HCode.
+%
+% xourse context: \youtube renders as a plain link (course-outline page).
+% ximera context: \youtube renders as a responsive privacy-friendly iframe.
+
+\@ifclassloaded{xourse}{%
+  \renewcommand\youtube[1]{%
+    \ifvmode \IgnorePar\fi \EndP
+    \HCode{<a class="youtube" href="https://www.youtube.com/watch?v=#1">#1</a>}%
+    \IgnoreIndent
+  }%
+}{%
+  \renewcommand{\youtube}[1]{%
+    \ifvmode \IgnorePar\fi \EndP
+    \HCode{<div class="ximera-video"><iframe src="https://www.youtube-nocookie.com/embed/#1" title="YouTube video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe></div>}%
+  }%
+}
+
+\endinput

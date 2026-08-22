@@ -1,0 +1,10 @@
+{
+  "name": "ximera-video",
+  "version": "0.1.0",
+  "type": "module",
+  "latex": {
+    "sty": ["ximera-video.sty"],
+    "4ht": ["ximera-video.4ht"],
+    "css": ["ximera-video.css"]
+  }
+}

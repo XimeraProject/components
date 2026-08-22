@@ -1,0 +1,8 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{ximera-xkcd}[2026/08/22 v0.1 Ximera \xkcd command]
+
+% Print mode: render the id as-is (no image available in PDF).
+\newcommand{\xkcd}[1]{#1}
+
+\ifdefined\HCode\input{ximera-xkcd.4ht}\fi
+\endinput

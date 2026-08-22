@@ -313,23 +313,23 @@ async function mountPhaseB(el, dispatchFn) {
   });
 
   // MathJax 4's tex-chtml bundle preloads the assistive Explorer, which
-  // installs mousedown/click/focusin/keydown listeners on the mjx-container.
-  // Because the input sits inside the rendered CHTML tree (positioned over
-  // the placeholder \phantom), those listeners see events first: pointer
-  // events get treated as "highlight this subexpression" (blocking focus),
-  // and keystrokes get treated as Explorer navigation commands (which beep
-  // when they don't match a binding). Stop propagation at the input so
-  // ancestor handlers never fire.
+  // installs pointer/focus/keyboard listeners on the mjx-container.
+  // Because our input + Check button sit inside the rendered CHTML tree
+  // (positioned over the placeholder \phantom), those listeners see
+  // events first: pointer/focus events get treated as "highlight this
+  // subexpression" (blocking focus), and keystrokes get treated as
+  // Explorer navigation commands (which beep when they don't match a
+  // binding). Stop propagation at the input-group so nothing that
+  // originates from the input, the button, or anything nested reaches
+  // the ancestor mjx-container.
   const isolate = (event) => event.stopPropagation();
-  input.addEventListener('mousedown', isolate);
-  input.addEventListener('click', isolate);
-  input.addEventListener('focusin', isolate);
-  input.addEventListener('keyup', isolate);
-  input.addEventListener('keypress', isolate);
-  // The Check button rides inside the same mjx-container as the input, so
-  // Explorer would swallow its click without this.
-  btn.addEventListener('mousedown', isolate);
-  btn.addEventListener('click', isolate);
+  for (const type of [
+    'pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'dblclick',
+    'contextmenu', 'focusin', 'focusout', 'keydown', 'keyup', 'keypress',
+    'touchstart', 'touchend',
+  ]) {
+    group.addEventListener(type, isolate);
+  }
 
   input.addEventListener('keydown', (event) => {
     event.stopPropagation();

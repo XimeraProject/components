@@ -1,34 +1,73 @@
-/* ximera-answer — inline math answer input, check button, live-preview popover.
-   The Check button uses the shared .ximera-btn--icon variant from
-   ximera-core.css: compact, with a ::before glyph showing ? / ✓ / ✗ from
-   data-state. Only positional adjustments live here. */
+/* ximera-answer — inline math answer input + attached Check button, plus a
+   live-preview popover.
 
-/* The state-holder span is invisible; the phantom span (created by MathJax
-   typesetting our \cssId'd \phantom) is where the input lives. */
+   The input and Check button ride inside a shared .ximera-input-group that
+   overlays the hidden \phantom span MathJax renders for our \cssId'd
+   placeholder. The group is a flex row so the two controls sit flush and
+   look like a single input-group (input on the left, button on the right,
+   shared vertical seam in the middle). Original-server achieved the same
+   look with Bootstrap's .input-group + .input-group-btn. */
 
-.ximera-answer-input {
+.ximera-input-group {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  padding: 0 0.25em;
+  display: flex;
+  /* Stretch both children to the same height so the input and button
+     read as one flush unit. Vertical text centering inside the input
+     is handled below by keeping the line-height smaller than the
+     input's stretched content-box (with box-sizing: border-box, if
+     line-height + padding > total height, browsers park text at top
+     rather than center). */
+  align-items: stretch;
+  box-sizing: border-box;
+}
+
+.ximera-answer-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  /* Zero vertical padding + moderate line-height leaves the full input
+     content-box (after border) available for the text row. Under
+     align-items: stretch this gives the browser slack on both sides,
+     so it can vertically center the text row within the content-box.
+     A larger vertical padding would collapse the content-box below the
+     line-height and push text to the top. */
+  padding: 0 0.4em;
+  line-height: 1.4;
   border: 1px solid var(--ximera-color-muted-border);
-  border-radius: 3px;
+  /* Rounded on the outside (left) only — the right edge butts against
+     the button. */
+  border-radius: var(--ximera-radius) 0 0 var(--ximera-radius);
+  border-right: 0;
   background: #fff;
   font: inherit;
   box-sizing: border-box;
-}
-.ximera-answer-input:disabled {
-  background: var(--ximera-color-correct-bg);
-  color: var(--ximera-color-correct);
-  border-color: var(--ximera-color-correct);
+  outline: none;
 }
 
-/* The check button is inserted immediately after the math wrapper — a small
-   left margin separates them. */
-.ximera-math-with-answers + .ximera-check-btn {
-  margin-left: 0.5em;
-  vertical-align: baseline;
+.ximera-answer-input:focus {
+  border-color: var(--ximera-color-primary);
+  z-index: 1;
+}
+
+/* Correct-locked input stays visually neutral — the disabled state
+   already conveys "no longer editable" via browser default, and the
+   button (which turns green) carries the pedagogical signal. Painting
+   the input background green as well over-marks the state. */
+.ximera-answer-input:disabled {
+  background: #fff;
+  color: var(--ximera-color-muted-fg);
+  border-color: var(--ximera-color-muted-border);
+}
+
+/* The Check button sits flush against the input's right edge. Override
+   .ximera-btn--icon's default rounding so only the outer (right) corners
+   are rounded. align-self: stretch + height: auto lets the button match
+   whatever height the input takes under align-items: stretch. */
+.ximera-input-group .ximera-check-btn {
+  border-radius: 0 var(--ximera-radius) var(--ximera-radius) 0;
+  flex: 0 0 auto;
+  align-self: stretch;
+  height: auto;
 }
 
 .ximera-math-popover {
@@ -36,7 +75,7 @@
   z-index: 100;
   background: #fff;
   border: 1px solid var(--ximera-color-neutral-border);
-  border-radius: 3px;
+  border-radius: var(--ximera-radius);
   padding: 0.3em 0.6em;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   font-size: 0.95em;

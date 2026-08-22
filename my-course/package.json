@@ -8,7 +8,7 @@
     "my-button": "*",
     "tex4npm": "*",
     "ximera-answer": "*",
-    "ximera-choice-util": "*",
+    "ximera-choice": "*",
     "ximera-core": "*",
     "ximera-dialogue": "*",
     "ximera-foldable": "*",

@@ -9,7 +9,7 @@
     "happy-dom": "^15.0.0",
     "tex4npm": "*",
     "ximera-answer": "*",
-    "ximera-choice-util": "*",
+    "ximera-choice": "*",
     "ximera-core": "*",
     "ximera-free-response": "*",
     "ximera-hint": "*",

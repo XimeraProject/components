@@ -15,7 +15,7 @@
     "ximera-core": "*"
   },
   "dependencies": {
-    "ximera-choice-util": "*"
+    "ximera-choice": "*"
   },
   "devDependencies": {
     "happy-dom": "^15.0.0",

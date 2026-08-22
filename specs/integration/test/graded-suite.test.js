@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 
 import { mountFixture, resetKernel, inspect } from 'ximera-core/conformance';
 import { dispatch } from 'ximera-core/kernel';
-import { shuffleIds } from 'ximera-choice-util';
+import { shuffleIds } from 'ximera-choice';
 
 import { readFixtureBody, reloadComponent, simulateMathJaxPlaceholders } from './helpers.js';
 

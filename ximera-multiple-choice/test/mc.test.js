@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 
 import { mountFixture, resetKernel, inspect } from 'ximera-core/conformance';
 import { dispatch } from 'ximera-core/kernel';
-import { shuffleIds } from 'ximera-choice-util';
+import { shuffleIds } from 'ximera-choice';
 
 async function loadMc() {
   const url = new URL('../index.js', import.meta.url).href + `?c=${Math.random()}`;

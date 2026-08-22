@@ -72,7 +72,7 @@ export function shuffleInitReducer() {
 // place. Returns { shuffled: boolean, seed: number|undefined }.
 //
 // Kept kernel-agnostic — the pilot passes `currentSeed` in explicitly
-// rather than importing readModel. This keeps ximera-choice-util a peer
+// rather than importing readModel. This keeps ximera-choice a peer
 // of ximera-core, not a dependent.
 //
 // options:

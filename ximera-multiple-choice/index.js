@@ -18,7 +18,7 @@ import {
   register, registerReducer, registerRender, readModel,
   syncAnswerableState, createCheckButton, wireChoiceList,
 } from 'ximera-core/kernel';
-import { initShuffleAtMount, shuffleInitReducer } from 'ximera-choice-util';
+import { initShuffleAtMount, shuffleInitReducer } from 'ximera-choice';
 
 // ─── Reducers ──────────────────────────────────────────────────────────────
 

@@ -1,0 +1,11 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{ximera-verbatim}[2026/08/22 v0.1 Ximera verbatim code environments]
+
+\RequirePackage{fancyvrb}
+
+\DefineVerbatimEnvironment{code}{Verbatim}{numbers=left,frame=lines,label=Code,labelposition=topline}
+\DefineVerbatimEnvironment{python}{Verbatim}{numbers=left,frame=lines,label=Python,labelposition=topline}
+\DefineVerbatimEnvironment{javascriptCode}{Verbatim}{numbers=left,frame=lines,label=JavaScript,labelposition=topline}
+
+\ifdefined\HCode\input{ximera-verbatim.4ht}\fi
+\endinput

@@ -1,0 +1,10 @@
+{
+  "name": "ximera-verbatim",
+  "version": "0.1.0",
+  "type": "module",
+  "latex": {
+    "sty": ["ximera-verbatim.sty"],
+    "4ht": ["ximera-verbatim.4ht"],
+    "css": ["ximera-verbatim.css"]
+  }
+}

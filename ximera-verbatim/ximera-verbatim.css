@@ -1,0 +1,23 @@
+pre.code,
+pre.python {
+  font-family: monospace;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  padding: 0.75em 1em;
+  overflow-x: auto;
+  line-height: 1.4;
+  margin: 1em 0;
+}
+
+pre.python {
+  border-left: 4px solid #3572a5;
+}
+
+pre.code {
+  border-left: 4px solid #e6b84a;
+}
+
+div.javascript-code {
+  display: none;
+}

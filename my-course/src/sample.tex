@@ -11,6 +11,8 @@
 \usepackage{ximera-select-all}
 \usepackage{ximera-dialogue}
 \usepackage{ximera-foldable}
+\usepackage{ximera-verbatim}
+\usepackage{ximera-video}
 
 \begin{document}
 
@@ -114,6 +116,26 @@ Or another thing would be
 \begin{foldable}
   Here's a longer aside on why $\sqrt{2}$ is irrational. Suppose to the contrary that $\sqrt{2} = p/q$ with $p, q$ coprime integers. Squaring gives $2 = p^2 / q^2$, i.e. $2 q^2 = p^2$, so $p^2$ is even, so $p$ is even. Writing $p = 2k$ we get $2q^2 = 4k^2$, i.e. $q^2 = 2 k^2$, so $q$ is even too --- contradicting our coprime assumption. Every \unfoldable{well-known} number-theoretic argument has a similar flavor.
 \end{foldable}
+
+\youtube{GNcFjFmqEc8}
+
+Here is the irrationality proof in Python:
+\begin{python}
+from math import isqrt
+
+def is_perfect_square(n):
+    return isqrt(n) ** 2 == n
+
+# sqrt(2) is irrational: 2 is not a perfect square
+print(is_perfect_square(2))  # False
+\end{python}
+
+And the same idea in pseudocode:
+\begin{code}
+function irrationalityOf(n):
+  // n is irrational iff it is not a perfect square
+  return sqrt(n) != floor(sqrt(n))
+\end{code}
 
 \begin{dialogue}
   \item[Alice] I've been thinking about $\sqrt{2}$.

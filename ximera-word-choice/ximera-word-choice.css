@@ -1,34 +1,83 @@
-/* ximera-word-choice — inline dropdown embedded in prose.
-   No buttons; the select is the input. Colors come from shared tokens. */
+/* ximera-word-choice — custom inline dropdown that preserves MathJax rendering.
+   Colors come from shared tokens defined in ximera-core.css. */
 
 .word-choice {
   display: inline-block;
   vertical-align: baseline;
 }
 
-select.ximera-word-select {
+/* ── Trigger (combobox) ─────────────────────────────────────────────────── */
+
+.ximera-word-select {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  position: relative;
   font-size: inherit;
   font-family: inherit;
-  padding: 1px 4px;
-  border: 1px solid var(--ximera-color-muted-border);
+  padding: 1px 5px 1px 4px;
+  border: 1px solid var(--ximera-color-muted-border, #ccc);
   border-radius: 3px;
   background: #fafafa;
   cursor: pointer;
+  user-select: none;
+  vertical-align: baseline;
 }
 
-select.ximera-word-select:focus {
-  outline: var(--ximera-focus-ring);
-  outline-offset: var(--ximera-focus-ring-offset);
+.ximera-word-select:focus {
+  outline: var(--ximera-focus-ring, 2px solid #005fcc);
+  outline-offset: var(--ximera-focus-ring-offset, 1px);
 }
 
-.word-choice[data-state~="correct"] select.ximera-word-select {
-  border-color: var(--ximera-color-correct);
-  background: var(--ximera-color-correct-bg);
-  color: var(--ximera-color-correct);
+.ximera-word-select__arrow {
+  font-size: 0.7em;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+
+/* ── Dropdown panel ─────────────────────────────────────────────────────── */
+
+.ximera-word-select__panel {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  z-index: 200;
+  min-width: 100%;
+  background: #fff;
+  border: 1px solid var(--ximera-color-muted-border, #ccc);
+  border-radius: 3px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+  white-space: nowrap;
+  overflow-y: auto;
+  max-height: 18em;
+}
+
+.ximera-word-option {
+  display: block;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.ximera-word-option:hover,
+.ximera-word-option:focus {
+  background: #f0f4ff;
+  outline: none;
+}
+
+.ximera-word-option[aria-selected="true"] {
+  background: #e8f0fe;
+}
+
+/* ── State variants ─────────────────────────────────────────────────────── */
+
+.word-choice[data-state~="correct"] .ximera-word-select {
+  border-color: var(--ximera-color-correct, #2e7d32);
+  background: var(--ximera-color-correct-bg, #e8f5e9);
+  color: var(--ximera-color-correct, #2e7d32);
   cursor: default;
 }
 
-.word-choice[data-state~="attempted"] select.ximera-word-select {
-  border-color: var(--ximera-color-incorrect);
-  background: var(--ximera-color-incorrect-bg);
+.word-choice[data-state~="attempted"] .ximera-word-select {
+  border-color: var(--ximera-color-incorrect, #c62828);
+  background: var(--ximera-color-incorrect-bg, #ffebee);
 }

@@ -1,11 +1,11 @@
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage{select-all}[2026/08/16 v0.1 Ximera selectAll environment (greenfield)]
+\ProvidesPackage{ximera-select-all}[2026/08/16 v0.1 Ximera selectAll environment (greenfield)]
 
-\RequirePackage{choice-util}
+\RequirePackage{ximera-choice-util}
 
 \newenvironment{selectAll}[1][]
 {\begin{trivlist}\item[\hskip \labelsep\small\bfseries \GetTranslation{Select All Correct Answers}:]\hfil\begin{enumerate}}
     {\end{enumerate}\end{trivlist}}
 
-\ifdefined\HCode\input{select-all.4ht}\fi
+\ifdefined\HCode\input{ximera-select-all.4ht}\fi
 \endinput

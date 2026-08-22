@@ -1,7 +1,7 @@
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage{word-choice}[2026/08/16 v0.1 Ximera wordChoice command (greenfield)]
+\ProvidesPackage{ximera-word-choice}[2026/08/16 v0.1 Ximera wordChoice command (greenfield)]
 
-\RequirePackage{choice-util}
+\RequirePackage{ximera-choice-util}
 
 \newenvironment{multipleChoice@}[1][]{}{)}
 
@@ -19,5 +19,5 @@
 \let\choice\choicetemp%
 }%
 
-\ifdefined\HCode\input{word-choice.4ht}\fi
+\ifdefined\HCode\input{ximera-word-choice.4ht}\fi
 \endinput

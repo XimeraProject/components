@@ -4,8 +4,8 @@
   "type": "module",
   "main": "index.js",
   "latex": {
-    "sty": ["word-choice.sty"],
-    "4ht": ["word-choice.4ht"],
+    "sty": ["ximera-word-choice.sty"],
+    "4ht": ["ximera-word-choice.4ht"],
     "css": ["ximera-word-choice.css"]
   },
   "scripts": {

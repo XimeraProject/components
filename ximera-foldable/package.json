@@ -4,8 +4,8 @@
   "type": "module",
   "main": "index.js",
   "latex": {
-    "sty": ["foldable.sty"],
-    "4ht": ["foldable.4ht"],
+    "sty": ["ximera-foldable.sty"],
+    "4ht": ["ximera-foldable.4ht"],
     "css": ["ximera-foldable.css"]
   },
   "peerDependencies": {

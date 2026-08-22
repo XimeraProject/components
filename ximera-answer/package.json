@@ -4,8 +4,8 @@
   "type": "module",
   "main": "index.js",
   "latex": {
-    "sty": ["answer.sty"],
-    "4ht": ["answer.4ht"],
+    "sty": ["ximera-answer.sty"],
+    "4ht": ["ximera-answer.4ht"],
     "css": ["ximera-answer.css"],
     "postprocess": "postprocess.js"
   },

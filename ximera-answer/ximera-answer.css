@@ -36,13 +36,14 @@
   border-radius: var(--ximera-radius) 0 0 var(--ximera-radius);
   border-right: 0;
   background: #fff;
-  /* Break the font inheritance chain from the mjx-container ancestor —
-     otherwise the input picks up MathJax's math font metrics (large
-     ascenders/descenders skew where the text row lands). Use the body
-     font at a fixed root-em size so the input renders consistently
-     regardless of the enclosing math context. */
+  /* Break the font *family* inheritance chain from the mjx-container
+     ancestor — otherwise the input picks up MathJax's math font metrics
+     (large ascenders/descenders skew where the text row lands). But
+     keep font-size relative to the surrounding context so an \answer
+     inside a superscript / fraction / smaller math environment shrinks
+     to match — matching the Check button (also em-relative). */
   font-family: system-ui, -apple-system, sans-serif;
-  font-size: 1rem;
+  font-size: 1em;
   color: inherit;
   box-sizing: border-box;
   outline: none;

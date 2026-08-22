@@ -1,0 +1,9 @@
+{
+  "name": "ximera-proof",
+  "version": "0.1.0",
+  "type": "module",
+  "latex": {
+    "sty": ["ximera-proof.sty"],
+    "4ht": ["ximera-proof.4ht"]
+  }
+}

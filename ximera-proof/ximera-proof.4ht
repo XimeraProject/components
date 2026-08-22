@@ -1,0 +1,11 @@
+% ximera-proof.4ht — tex4ht hooks for the ximera-proof package.
+% Loaded from ximera-proof.sty inside \ifdefined\HCode.
+%
+% Unified with the other theorem-like environments: emits
+%   <div class="theorem-like problem-environment proof">
+% so that ximera-core.css's .theorem-like.proof rules (∎, no border)
+% actually match.
+
+\ConfigureTheoremEnv{proof}
+
+\endinput

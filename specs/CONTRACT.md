@@ -303,7 +303,9 @@ Runs on `PAGE_STATE_RESTORED` and `AGENT_READY_OFFLINE`. For every `.problem-env
 
 - If the environment is top-level (no ancestor `.problem-environment`) → `available: true`.
 - Else if the environment lacks `data-blocking` → `available: true`.
-- Else (nested + blocking) → `available: false` unless it already had `available: true` in the restored model.
+- Else if the environment has no *gating ancestor* → `available: true`. The gating ancestor is the nearest ancestor `.problem-environment` that itself has direct answerables; theorem-like wrappers and pure containers have none, so nothing at that level could ever complete first — their blocking descendants must be reachable from the start.
+- Else if the gating ancestor's entry is already `complete: true` → `available: true`.
+- Else (nested + blocking + gated by an incomplete ancestor) → `available: false` unless it already had `available: true` in the restored model.
 
 `data-blocking` is authored (or set by postprocess for older content). In the new design `data-blocking` is **computed at runtime** from the answerable registry (D3): an environment is blocking iff it directly contains an answerable. The attribute stays as an author override for edge cases.
 
@@ -316,7 +318,7 @@ Called by the kernel's completion diff (§7). Given a problem-environment id, on
 3. **Inert.** If the environment has neither direct answerables nor direct-child problems, it cannot complete via this mechanism. Nothing happens.
 
 When the environment transitions to `complete: true`:
-- Any direct-child `.problem-environment[data-blocking]` becomes `available: true` and `experienced: true`. This is the "uncovering" behavior.
+- Any descendant `.problem-environment[data-blocking]` whose gating ancestor is *this* environment becomes `available: true` and `experienced: true`. This is the "uncovering" behavior, and it reaches through no-answerable containers (theorem-like wrappers) that couldn't gate on their own.
 - Any direct-child `.feedback[data-feedback="attempt"|"correct"]` becomes visible (§12 or `ximera-feedback` spec).
 - Recurse to the parent problem-environment.
 

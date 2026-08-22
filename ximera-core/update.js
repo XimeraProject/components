@@ -73,7 +73,13 @@ function coreReduce(model, msg) {
 // Rules (CONTRACT §9):
 //   - top-level (no ancestor .problem-environment) → available: true
 //   - non-blocking → available: true
-//   - nested + blocking → available: false UNLESS the entry already has
+//   - nested + blocking with no gating ancestor → available: true
+//     (a "gating ancestor" is the nearest ancestor problem-environment
+//     that has direct answerables; theorem-like wrappers and other pure
+//     containers have none, so their blocking descendants are revealed
+//     immediately — nothing at that level can be completed first)
+//   - nested + blocking with a complete gating ancestor → available: true
+//   - otherwise → available: false UNLESS the entry already has
 //     available: true (persisted from a prior completion)
 //
 // Blocking is either the author-set data-blocking attribute OR computed
@@ -99,8 +105,12 @@ export function initializeAvailability(model) {
       el.setAttribute('data-blocking', '');
     }
 
+    const gate = findGatingAncestor(el, answerableSelector);
+    const gateOpen = !gate || getEntry(next, gate.id).complete === true;
+
     const existing = getEntry(next, el.id);
-    const shouldBeAvailable = isTopLevel || !isBlocking || existing.available === true;
+    const shouldBeAvailable =
+      isTopLevel || !isBlocking || gateOpen || existing.available === true;
 
     const merged = {
       complete: false,
@@ -121,6 +131,20 @@ function hasDirectAnswerable(el, answerableSelector) {
     if (m.closest('.problem-environment') === el) return true;
   }
   return false;
+}
+
+// Walk up problem-environment ancestors, skipping ones with no direct
+// answerables (theorem-like wrappers, containers, etc.). Return the
+// nearest ancestor that could gate — the one whose completion actually
+// controls reveal. Returns null when no gating ancestor exists.
+function findGatingAncestor(el, answerableSelector) {
+  if (!answerableSelector) return null;
+  let cur = el.parentElement?.closest('.problem-environment');
+  while (cur) {
+    if (hasDirectAnswerable(cur, answerableSelector)) return cur;
+    cur = cur.parentElement?.closest('.problem-environment');
+  }
+  return null;
 }
 
 // ─── propagateCorrectness ──────────────────────────────────────────────────
@@ -172,10 +196,14 @@ export function propagateCorrectness(model, problemId) {
     }
   }
 
-  // Uncover direct-child blocking sub-problems.
+  // Uncover blocking descendants whose gating ancestor is this problem —
+  // reaches through theorem-like/wrapper envs that have no answerables of
+  // their own, so a completion here still opens the semantically-next
+  // problem even when it's a grand-descendant.
+  const answerableSelectorForBlockers = getAnswerableSelector();
   for (const child of problemEl.querySelectorAll('.problem-environment[data-blocking]')) {
-    if (child.parentElement?.closest('.problem-environment') !== problemEl) continue;
     if (!child.id) continue;
+    if (findGatingAncestor(child, answerableSelectorForBlockers) !== problemEl) continue;
     const childEntry = getEntry(next, child.id);
     if (!childEntry.available) {
       next = setEntry(next, child.id, { available: true, experienced: true });

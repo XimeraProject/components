@@ -224,3 +224,46 @@ test('propagateCorrectness uncovers direct-child blockers', () => {
   model = propagateCorrectness(model, 'outer');
   assert.equal(model['inner'].available, true);
 });
+
+// ─── theorem-like / no-answerable containers don't gate ────────────────────
+
+test('initializeAvailability: theorem-like wrapper reveals inner problem immediately', () => {
+  resetAll();
+  register('.a', () => {}, { answerable: true });
+  document.body.innerHTML = `
+    <div class="theorem-like problem-environment" id="thm">
+      <div class="problem-environment" id="inner">
+        <span class="a" id="a-1"></span>
+      </div>
+    </div>`;
+  const model = initializeAvailability({});
+  // The theorem has no answerables of its own, so nothing at that level
+  // could ever be "completed first". Its blocking child must therefore be
+  // available from the start.
+  assert.equal(model['thm'].available, true);
+  assert.equal(model['inner'].available, true);
+  assert.equal(model['inner'].experienced, true);
+});
+
+test('propagateCorrectness uncovers blocker through no-answerable wrapper', () => {
+  resetAll();
+  register('.a', () => {}, { answerable: true });
+  document.body.innerHTML = `
+    <div class="problem-environment" id="outer">
+      <span class="a" id="a-1"></span>
+      <div class="theorem-like problem-environment" id="thm">
+        <div class="problem-environment" id="inner">
+          <span class="a" id="a-2"></span>
+        </div>
+      </div>
+    </div>`;
+  let model = runReduce({}, { type: 'AGENT_READY_OFFLINE' });
+  // Outer has answerables — it gates. Inner is still hidden while outer's
+  // answer is unanswered, even though a transparent theorem sits between.
+  assert.equal(model['inner'].available, false);
+  model = { ...model, 'a-1': { complete: true } };
+  model = propagateCorrectness(model, 'outer');
+  // After the outer's answerable completes, the theorem doesn't need to
+  // "become complete" to open its child — outer reaches through.
+  assert.equal(model['inner'].available, true);
+});

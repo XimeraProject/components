@@ -77,21 +77,45 @@
 
 /* Anchored to the .ximera-input-group's containing block (the mjx placeholder
    span, which we set to position:relative in mount). Drops just below the
-   input, left-aligned with it, with a small gap. Sized to its own content
-   so the rendered LaTeX preview isn't stretched to the input's width. */
+   input, left-aligned with it, with a small gap so the connector arrow
+   (see ::before) has room. Sized to its own content — the rendered math
+   preview shouldn't be forced to the input's width. Font-size is bumped
+   because the popover is the student's read-back of what they typed; it
+   needs to be comfortably legible, not miniaturized. */
 .ximera-math-popover {
   position: absolute;
   top: 100%;
   left: 0;
-  margin-top: 4px;
+  margin-top: 8px;
   z-index: 100;
   background: #fff;
   border: 1px solid var(--ximera-color-neutral-border);
   border-radius: var(--ximera-radius);
-  padding: 0.3em 0.6em;
+  padding: 0.4em 0.8em;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  font-size: 0.95em;
+  font-size: 1.25em;
   white-space: nowrap;
   pointer-events: none;
 }
+
+/* Speech-bubble tail pointing up at the input. A 10×10 white square,
+   rotated 45°, with top+left borders drawn — those two edges become the
+   two visible sides of the triangle. Positioned so its bottom half hides
+   behind the popover body (which is opaque and paints on top), leaving
+   only a triangular nub sticking out the top. left aligns it under the
+   input's left edge, offset a bit in so it doesn't sit on the popover's
+   rounded corner. */
+.ximera-math-popover::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 14px;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border-top: 1px solid var(--ximera-color-neutral-border);
+  border-left: 1px solid var(--ximera-color-neutral-border);
+  transform: rotate(45deg);
+}
+
 .ximera-math-popover[hidden] { display: none; }

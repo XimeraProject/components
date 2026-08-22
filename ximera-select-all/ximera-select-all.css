@@ -1,23 +1,49 @@
 /* ximera-select-all — checkbox multi-select with explicit Check.
    Button chrome comes from ximera-core.css (.ximera-btn / --full). */
 
+/* Choices sit flush as a vertical button group — modeled on Bootstrap's
+   .btn-group-vertical. Gap:0 keeps them touching; margin-top:-1px on
+   every choice past the first collapses the shared border into a single
+   line; only the outermost corners are rounded. */
 .select-all {
   display: flex;
   flex-direction: column;
-  gap: 0.4em;
+  gap: 0;
   margin: 0.8em 0;
+  max-width: 40em;
 }
 
 .select-all .choice {
-  display: inline-block;
+  /* Flex + explicit min-height so every row has the same vertical
+     mass regardless of whether its content is plain text (which inherits
+     body line-height 1.55) or a MathJax mjx-container (which resets
+     line-height to 0). Without this, MathJax-rendered choices sit
+     visibly shorter than plain-text ones. */
+  display: flex;
+  align-items: center;
+  min-height: 1.8em;
   padding: 0.35em 0.75em;
   border: 1px solid var(--ximera-color-neutral-border);
-  border-radius: var(--ximera-radius);
+  border-radius: 0;
   cursor: pointer;
   user-select: none;
   background: #fafafa;
   transition: background 0.15s;
-  max-width: 40em;
+  position: relative;
+}
+
+.select-all .choice + .choice {
+  margin-top: -1px;
+}
+
+.select-all .choice:first-of-type {
+  border-top-left-radius: var(--ximera-radius);
+  border-top-right-radius: var(--ximera-radius);
+}
+
+.select-all .choice:last-of-type {
+  border-bottom-left-radius: var(--ximera-radius);
+  border-bottom-right-radius: var(--ximera-radius);
 }
 
 .select-all .choice::before {
@@ -39,11 +65,13 @@
 .select-all .choice:focus {
   outline: var(--ximera-focus-ring);
   outline-offset: var(--ximera-focus-ring-offset);
+  z-index: 1;
 }
 
 .select-all .choice[data-state~="selected"] {
   background: #ddeeff;
   border-color: var(--ximera-color-focus);
+  z-index: 1;
 }
 
 .select-all[data-state~="correct"] .choice.correct,
@@ -51,9 +79,10 @@
   background: var(--ximera-color-correct-bg);
   border-color: var(--ximera-color-correct);
   color: var(--ximera-color-correct);
+  z-index: 1;
 }
 
 .select-all .ximera-check-btn {
   align-self: flex-start;
-  margin-top: 0.4em;
+  margin-top: 0.6em;
 }

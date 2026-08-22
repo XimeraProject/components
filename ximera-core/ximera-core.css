@@ -368,12 +368,6 @@ body h1, body h2, body h3, body h4 {
   color: var(--ximera-color-correct);
 }
 
-.ximera-btn[data-state="correct"]::before,
-.ximera-check-btn[data-state="correct"]::before,
-.ximera-submit-btn[data-state="correct"]::before {
-  content: "\2713";        /* ✓ */
-}
-
 /* State: incorrect / attempted — flips to the danger palette. */
 .ximera-btn[data-state="incorrect"],
 .ximera-btn[data-state="attempted"],
@@ -386,13 +380,32 @@ body h1, body h2, body h3, body h4 {
   color: var(--ximera-color-incorrect);
 }
 
-.ximera-btn[data-state="incorrect"]::before,
-.ximera-btn[data-state="attempted"]::before,
+/* Icon glyphs on every check / submit button, delivered via FontAwesome 6
+   free-solid loaded from CDN (see ximera.cfg for the <link> that installs
+   the @font-face). All state transitions are pure CSS — pilot code never
+   touches icon markup. Default: ? for check, ✈ for submit; correct: ✓;
+   attempted / incorrect: ✗. Matches original-server's chrome vocabulary. */
+.ximera-check-btn::before,
+.ximera-submit-btn::before {
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  font-style: normal;
+  line-height: 1;
+}
+
+.ximera-check-btn::before  { content: "\f128"; }             /* fa-question */
+.ximera-submit-btn::before { content: "\f1d8"; }             /* fa-paper-plane */
+
+.ximera-check-btn[data-state="correct"]::before,
+.ximera-submit-btn[data-state="correct"]::before {
+  content: "\f00c";                                          /* fa-check */
+}
+
 .ximera-check-btn[data-state="incorrect"]::before,
 .ximera-check-btn[data-state="attempted"]::before,
 .ximera-submit-btn[data-state="incorrect"]::before,
 .ximera-submit-btn[data-state="attempted"]::before {
-  content: "\2717";        /* ✗ */
+  content: "\f00d";                                          /* fa-xmark */
 }
 
 /* Variant: --full. Full-width button for standalone answerables (mc/sa/fr).
@@ -403,23 +416,15 @@ body h1, body h2, body h3, body h4 {
 }
 
 /* Variant: --icon. Compact square for inline placements (next to a math
-   answer input). The ::before glyph does the labeling, so text content
-   can be empty or hidden. Used with data-state to show ✓ / ✗ / ? state. */
+   answer input). The FA ::before glyph inherited from the check/submit
+   base rules does the labeling; we hide the text label and shrink the
+   box. Used with data-state to show ✓ / ✗ / ? state. */
 .ximera-btn--icon {
   padding: 0.15em 0.4em;
   min-width: 1.8em;
   min-height: 1.6em;
   gap: 0;
   font-size: 0.95em;
-}
-
-.ximera-btn--icon:not([data-state="correct"]):not([data-state="incorrect"]):not([data-state="attempted"])::before {
-  content: "?";
-  font-weight: bold;
-}
-
-/* Icon-only buttons hide their text label; the ::before glyph is the label. */
-.ximera-btn--icon {
   color: transparent;
 }
 
@@ -436,6 +441,17 @@ body h1, body h2, body h3, body h4 {
 .ximera-btn--icon[data-state="incorrect"]::before,
 .ximera-btn--icon[data-state="attempted"]::before {
   color: var(--ximera-color-incorrect);
+}
+
+/* The state-driven color rules above (specificity 0,2,0) would otherwise
+   override `.ximera-btn--icon { color: transparent }` (0,1,0), making the
+   button's text label appear in the state color. Icon buttons never show
+   text — only the ::before glyph — so pin transparent at matching
+   specificity for every state. */
+.ximera-btn--icon[data-state="correct"],
+.ximera-btn--icon[data-state="incorrect"],
+.ximera-btn--icon[data-state="attempted"] {
+  color: transparent;
 }
 
 /* ─── Reset control ──────────────────────────────────────────────────────── */

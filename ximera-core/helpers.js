@@ -101,8 +101,14 @@ export function createAnswerableButton({
   else if (variant === 'icon') classes.push('ximera-btn--icon');
   btn.className = classes.join(' ');
 
-  btn.textContent =
-    label ?? (kind === 'submit' ? 'Submit' : 'Check');
+  // Icon variant is FA-glyph-only (label via ::before, name via aria-label);
+  // a text node inside the button would take horizontal width even under
+  // color: transparent and expand the button past its intended 1.8em min.
+  if (variant !== 'icon') {
+    btn.textContent = label ?? (kind === 'submit' ? 'Submit' : 'Check');
+  } else if (label != null) {
+    btn.textContent = label;
+  }
   btn.setAttribute(
     'aria-label',
     ariaLabel ?? (kind === 'submit' ? 'submit response' : 'check answer')

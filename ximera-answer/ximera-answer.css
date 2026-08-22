@@ -12,34 +12,38 @@
   position: absolute;
   inset: 0;
   display: flex;
-  /* Stretch both children to the same height so the input and button
-     read as one flush unit. Vertical text centering inside the input
-     is handled below by keeping the line-height smaller than the
-     input's stretched content-box (with box-sizing: border-box, if
-     line-height + padding > total height, browsers park text at top
-     rather than center). */
-  align-items: stretch;
+  /* Center vertically instead of stretching. When <input> height is
+     imposed externally (via stretch), browsers do NOT vertically center
+     the single text row — they park it near the top of the content-box.
+     Giving the input its own intrinsic height (via line-height + padding)
+     and centering it inside the row is the reliable path. */
+  align-items: center;
   box-sizing: border-box;
 }
 
 .ximera-answer-input {
   flex: 1 1 auto;
   min-width: 0;
-  /* Zero vertical padding + moderate line-height leaves the full input
-     content-box (after border) available for the text row. Under
-     align-items: stretch this gives the browser slack on both sides,
-     so it can vertically center the text row within the content-box.
-     A larger vertical padding would collapse the content-box below the
-     line-height and push text to the top. */
-  padding: 0 0.4em;
-  line-height: 1.4;
+  /* Intrinsic height = line-height + 2×padding + 2×border. With
+     line-height:1 and 0.35em vertical padding the input renders at
+     ~1.7em, roughly a Bootstrap-input height, and the single-line text
+     sits centered by the browser's default input baseline handling. */
+  padding: 0.35em 0.5em;
+  line-height: 1;
   border: 1px solid var(--ximera-color-muted-border);
   /* Rounded on the outside (left) only — the right edge butts against
      the button. */
   border-radius: var(--ximera-radius) 0 0 var(--ximera-radius);
   border-right: 0;
   background: #fff;
-  font: inherit;
+  /* Break the font inheritance chain from the mjx-container ancestor —
+     otherwise the input picks up MathJax's math font metrics (large
+     ascenders/descenders skew where the text row lands). Use the body
+     font at a fixed root-em size so the input renders consistently
+     regardless of the enclosing math context. */
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 1rem;
+  color: inherit;
   box-sizing: border-box;
   outline: none;
 }
@@ -61,8 +65,9 @@
 
 /* The Check button sits flush against the input's right edge. Override
    .ximera-btn--icon's default rounding so only the outer (right) corners
-   are rounded. align-self: stretch + height: auto lets the button match
-   whatever height the input takes under align-items: stretch. */
+   are rounded. align-self: stretch makes the button match the input's
+   intrinsic height (the group is align-items: center, so without this
+   override the button would only be as tall as its own content). */
 .ximera-input-group .ximera-check-btn {
   border-radius: 0 var(--ximera-radius) var(--ximera-radius) 0;
   flex: 0 0 auto;
@@ -70,8 +75,15 @@
   height: auto;
 }
 
+/* Anchored to the .ximera-input-group's containing block (the mjx placeholder
+   span, which we set to position:relative in mount). Drops just below the
+   input, left-aligned with it, with a small gap. Sized to its own content
+   so the rendered LaTeX preview isn't stretched to the input's width. */
 .ximera-math-popover {
   position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
   z-index: 100;
   background: #fff;
   border: 1px solid var(--ximera-color-neutral-border);
@@ -79,5 +91,7 @@
   padding: 0.3em 0.6em;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   font-size: 0.95em;
+  white-space: nowrap;
+  pointer-events: none;
 }
 .ximera-math-popover[hidden] { display: none; }

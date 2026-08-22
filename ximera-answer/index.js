@@ -294,6 +294,11 @@ async function mountPhaseB(el, dispatchFn) {
   popover.className = 'ximera-math-popover';
   popover.setAttribute('role', 'tooltip');
   popover.hidden = true;
+  // Placeholder is visibility:hidden (see above) so MathJax's phantom
+  // doesn't paint through our chrome; every visible child has to opt
+  // back in explicitly. Without this, `popover.hidden = false` clears
+  // display:none but the popover still won't paint.
+  popover.style.visibility = 'visible';
   placeholder.appendChild(popover);
 
   const doCheck = () => dispatchFn({ type: 'ximera-answer:CHECK', ...checkExtras });
@@ -370,13 +375,22 @@ async function updatePopover(input, popover, format) {
     return;
   }
 
+  // Try the text grammar first ("sqrt(2)", "2x", "x^2") — that's what
+  // students most often type. Fall back to the LaTeX grammar so a student
+  // who's typing raw TeX ("\sqrt{2}", "\frac{1}{2}") also gets a preview.
+  // This mirrors the parseFormattedInput fallback order used for checking.
+  // Parse failures are the norm mid-typing; surface nothing rather than a
+  // "syntax error" popover.
   let latex;
   try {
     latex = Expression.fromText(text).tex();
-  } catch (err) {
-    popover.textContent = String(err?.message ?? err ?? 'parse error');
-    popover.hidden = false;
-    return;
+  } catch {
+    try {
+      latex = Expression.fromLatex(text).tex();
+    } catch {
+      popover.hidden = true;
+      return;
+    }
   }
 
   popover.textContent = `\\(${latex}\\)`;

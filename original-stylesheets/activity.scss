@@ -1,0 +1,72 @@
+// tex4ht emits these
+.center {
+    text-align: center;
+}
+
+// the preamble includes \newcommands which should not be displayed
+.preamble {
+	  display: none;
+}
+
+.activity-body pre {
+    white-space: normal;
+}
+
+/****************************************************************/
+/* Try to spread out lines a bit for readability? */
+
+.activity-content {
+    line-height: $line-height-base * 1.35;
+}
+
+/****************************************************************/
+/* LaTeX logo */
+
+span.LATEX {
+  font-family: Times, "Times New Roman", serif;	
+  letter-spacing: 1px;
+}
+
+span.LATEX .A {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.85em;
+  vertical-align: 0.15em;
+  margin-left: -0.36em;
+  margin-right: -0.15em;
+}
+
+span.LATEX .TEX .E {
+  text-transform: uppercase;
+  vertical-align: -0.5ex;
+  margin-left: -0.1667em;
+  margin-right: -0.125em;
+  font-size: 1em;
+}
+
+// Some better spacing
+.sectionHead {
+    @extend .mt-5;
+}
+
+.subsectionHead {
+    @extend .mt-3;
+}
+
+.likesubsectionHead {
+    @extend .mt-3;
+}
+
+/****************************************************************/
+/* tex4ht generates description lists from \begin{description} */
+
+dl.description {
+    margin-top: 12px;
+    margin-bottom: 12px;    
+}
+
+dl.description dt.description {
+    float: left;
+    clear: left;
+    padding-right: 0.5em;
+}

@@ -1,0 +1,27 @@
+.activity p {
+  margin-bottom: 8pt;
+}
+
+.model-solution::first-child:before
+{
+    content:"Model Solution. ";
+    display: inline;
+    font-weight: bold;
+} 
+
+.model-solution {
+    background-color: #FFB;
+    border-radius: 4pt;
+    padding: 4pt;
+    margin-top: 4pt;
+    margin-bottom: 4pt;
+}
+
+.question {
+  margin-bottom: 16pt;
+}
+
+.solution {
+  margin-top: 4pt;
+  margin-bottom: 8pt;
+}

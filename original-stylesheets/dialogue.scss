@@ -1,0 +1,20 @@
+dl.dialogue {
+    margin-top: 18pt;
+    margin-bottom: 18pt;    
+    @extend .row;
+}
+
+dl.dialogue dt {
+    @extend .col-md-2;
+}
+
+dl.dialogue dd {
+    @extend .col-md-10;
+}
+
+@media screen and (min-width: 48em){
+    dl.dialogue dt {
+	// @extend .text-right; but that doesn't work inside a media query
+	text-align: right !important;
+    }    
+}

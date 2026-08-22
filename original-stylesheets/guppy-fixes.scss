@@ -1,0 +1,10 @@
+// Make the guppy math input window as wide as the screen
+
+#guppymathModal {
+    padding-right: 0;
+}
+
+#guppymathModal .modal-dialog {
+    padding: 6pt;
+    max-width: 100%;
+}

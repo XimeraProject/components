@@ -1,0 +1,305 @@
+.verb {
+    font-family: monospace;
+}
+
+
+/*****************************************************************/
+/* heartbeat to attract the eye to changing values */
+
+.heartbeat
+{
+     transition:opacity 1s linear;
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 14px rgba(0,0,0,0); }
+    50% { box-shadow: 0 0 14px rgba(0,0,0,0.5); }
+    100% { box-shadow: 0 0 14px rgba(0,0,0,0);} 
+}
+
+.pager .pulse a {
+    -webkit-animation: pulse 1.5s infinite ease-in-out;
+    animation: pulse 1.5s infinite ease-in-out;
+}
+
+/*****************************************************************/
+/* course navigation bar */
+
+// TODO: Fix?
+.form-inline {
+  margin-bottom:-0.8em;
+}
+
+.form-inline .input-group input {
+    min-width:8em;
+}
+
+
+/****************************************************************/
+
+@import "color-scheme";
+
+$body-bg: $white;
+
+/****************************************************************/
+
+
+//$navbar-default-brand-color: #989CAE;
+//$navbar-default-brand-color: #000;
+
+//$navbar-inverse-bg: $secondary-color;
+//$navbar-inverse-bg: #EEE;
+//$navbar-inverse-color: #555;
+//$navbar-inverse-link-color: #666;
+
+//$navbar-default-bg: $secondary-color;
+//$navbar-default-color: $white;
+
+//$navbar-default-bg: $white;
+//$navbar-default-color: #000;
+
+//$navbar-default-link-color: $white;
+//$navbar-default-link-hover-color: $secondary-color-whiter;
+//$navbar-default-link-active-color: $secondary-color-darkest;
+//$navbar-default-link-active-bg: $secondary-color-whiter;
+
+//$navbar-default-link-color: #000;
+//$navbar-default-link-hover-color: #222;
+//$navbar-default-link-hover-bg: #EEE;
+//$navbar-default-link-active-color: #333;
+//$navbar-default-link-active-bg: #DDD;
+
+//$navbar-default-brand-color: $white;
+/*
+.navbar, .navbar .brand, .navbar .nav > li > a {
+    text-shadow: none;
+}
+*/
+
+/* Links to ximera should not be emphasized */
+/*
+a.ximera {
+    color: inherit;
+}
+*/
+
+/*
+a.email {
+    font-family: $font-family-monospace;
+}
+*/
+
+/* Create the impression that the header is "above" the content with a shadow */
+/*
+.navbar-fixed-top {
+  background-color: $navbar-default-bg;
+  background-image: none;
+  background-image: none;
+  background-image: none;
+  background-image: none;
+  background-image: none;
+  background-image: none;
+  background-repeat: no-repeat;
+  filter: none;
+  border: none;
+}
+*/
+/* BADBAD?
+.navbar-fixed-top {
+    .box-shadow(0 0 2px 2px rgba(0,0,0,0.15));
+}
+*/
+
+/* Create the impression that the footer is "under" the content with an inset shadow */
+/*
+div.footer .navbar-static-bottom {
+  background-color: $navbar-inverse-bg;
+  background-image: none;
+  background-image: none;
+  background-image: none;
+  background-image: none;
+  background-image: none;
+  background-image: none;
+  background-repeat: no-repeat;
+  filter: none;
+}
+
+div.footer .navbar-static-bottom {
+    box-shadow: inset 1px 4px 9px -6px rgba(0,0,0,0.25);
+}
+
+$footer-height: 14em;
+$navbar-border-radius: 0px;
+*/
+
+/*****************************************************************/
+/* Big boxes in which to feature content */
+/*
+.feature {
+  padding-top: 60px;
+  padding-bottom: 60px;
+}
+
+.dark {
+  background-color: #000;
+}
+
+a.giant-badge {
+  display: block;
+  color: black;
+}
+
+a.giant-badge:hover {
+  color: black;
+  text-decoration: none;
+}
+
+a.giant-badge:hover h3 {
+  text-decoration: underline;
+}
+
+.callout {
+  padding-top: 120px;
+  padding-bottom: 60px;
+  background-color: #000;
+  color: $white;
+  border-bottom: solid black 1px;
+  box-shadow: 0px 1px 10px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(63deg, rgba(0,0,0,0.8), rgba(0,0,0,0.2)), url('/public/images/patterns/exes.png');
+  background-repeat:repeat;
+}
+*/
+/*
+.giant-badge i {
+    vertical-align: middle;
+    text-align: center;
+    display: block;
+    color: #DDD;
+    text-align: center;
+    z-index: -1;
+}
+
+.giant-badge h3 {
+    font-size: 24pt;
+    text-align: center;
+}
+
+.giant-badge p {
+    text-align: center;
+}
+
+.callout h1 {
+  font-size: 60pt;
+  line-height: 60pt;
+  text-transform:uppercase;
+}
+
+.callout h2 {
+  font-size: 36pt;
+  line-height: 36pt;
+}
+*/
+
+/* icon-header is now fa-text-height */
+/*
+.icon-header, .icon-hr-line {
+  display: inline-block;
+  font-family: FontAwesome;
+  font-style: normal;
+  font-weight: normal;
+  line-height: 19px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.icon-header:before {
+  content: "\f034";
+}
+
+.icon-hr-line:before {
+  content: "\f141";
+}
+*.
+
+@import "user.scss";
+@import "activity.scss";
+@import "xourse.scss";
+
+
+////////////////////////////////////////////////////////////////
+// Syntax Highlighter 
+
+@import "./syntaxHighlighter.scss";
+
+.syntaxhighlighter .toolbar {
+    display: none;
+}
+
+/* Some fixes for bootstrap interaction with syntaxhighlighter */
+.syntaxhighlighter .container:before {
+    display: block;
+}
+.syntaxhighlighter .container:after {
+    display: block;
+}
+
+.syntaxhighlighter code {
+    background-color: white;
+    padding: 0;
+}
+
+////////////////////////////////////////////////////////////////
+// Date picker
+
+@import "../../node_modules/eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css";
+
+
+
+//@import "fonts.scss";
+//$font-family-serif: 'STIXGeneral', 'Times New Roman', Times, serif;
+//$font-family-base: $font-family-serif;
+//$headings-font-family: $font-family-sans-serif;
+
+//$font-size-base: 12pt;
+
+//$font-family-serif: MJX_Main, Georgia, 'Times New Roman', Times, serif;
+//$font-family-base: $font-family-serif;
+//$headings-font-family: $font-family-sans-serif;
+//$font-size-base: 12pt; This is really 14px
+
+/*
+.activity-content {
+    font-family: $font-family-serif;
+}
+
+.activity-content button {
+    font-family: $font-family-sans-serif;    
+}
+*/
+			 
+// .btn:focus {outline: thin dotted black;}
+
+/*****************************************************************/
+/* codemirror CSS */
+
+/* BADBAD: I guess we're not using codemirror for the time being?! */
+/* @import "../../node_modules/codemirror/lib/codemirror.css"; */
+
+/*****************************************************************/
+/* some frontpage hacks */
+/*
+hr.frontpage {
+    margin-top: 3em;
+    margin-bottom: 3em;
+}
+
+h3.frontpage {
+    margin-top: 2em;
+    margin-bottom: 0.5em;
+    text-transform:uppercase;    
+}*/
+
+
+@import "certificate";
+
+

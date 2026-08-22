@@ -1,0 +1,32 @@
+/****************************************************************/
+/* OSU branding guidelines */
+@import "osu_navbar-resp.scss";
+
+$font-family-sans-serif: 'proximanova',Arial,sans-serif;
+$font-family-serif: 'capita','Times New Roman',serif;
+
+$link-color: $primary-color-light;
+$link-hover-color: $primary-color-darkest;
+
+footer .osu a {
+    display: inline;
+}
+
+footer hr {
+  border-color: rgb(150,150,150);
+}
+
+footer .osu p {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.affix-top {
+    position: absolute;
+    top: 42px; /* the OSU navbar is 42px high */
+}
+
+.affix {
+    position: fixed;
+    top: none;
+}

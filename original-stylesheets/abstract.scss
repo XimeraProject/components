@@ -1,0 +1,21 @@
+/* The styling for the abstract */
+.abstract p:first-child:before {
+  font-weight:bold;
+  content:"Abstract.";
+  font-style:normal;
+  display: inline;
+  padding-right: 0.5em;
+  font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.abstract {
+  text-align:justify;
+  font-style:italic;
+  margin-top:2em;  
+  margin-bottom:2em;
+  color: gray;
+}
+
+.abstract:empty {
+    display: none;
+}

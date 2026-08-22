@@ -1,0 +1,22 @@
+
+.tex sub, .other-latex sub, .other-latex sup {
+  text-transform: uppercase;
+}
+
+.tex sub, .other-latex sub {
+  vertical-align: 0.15ex;
+  margin-left: -0.1667em;
+  margin-right: -0.125em;
+}
+
+.tex, .other-latex, .tex sub, .other-latex sub {
+  font-size: 1em;
+}
+
+.other-latex sup {
+  font-size: 0.75em;
+  vertical-align: -0.15em;
+  margin-left: -0.36em;
+  margin-right: -0.15em;
+}
+

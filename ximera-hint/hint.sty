@@ -1,6 +1,10 @@
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage{hint}[2026/08/16 v0.1 Ximera hint environment (greenfield)]
 
+% \begin{expandable}{class}{title} lives in ximera-foldable — pull it in
+% so authors don't need to \usepackage{foldable} explicitly before hint.
+\RequirePackage{foldable}
+
 \newcounter{hintLevel}
 \setcounter{hintLevel}{0}
 

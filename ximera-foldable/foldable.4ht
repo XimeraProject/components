@@ -1,4 +1,4 @@
-% foldable.4ht — tex4ht hooks for the foldable environment.
+% foldable.4ht — tex4ht hooks for foldable / accordion / expandable.
 % Loaded from foldable.sty inside \ifdefined\HCode.
 
 \renewenvironment{foldable}
@@ -6,17 +6,37 @@
    \HCode{<div id="foldable\arabic{identification}" class="foldable">}}
   {\HCode{</div>}\IgnoreIndent}
 
-% If the author opted out of expandable-as-accordion, the "expandable"
-% environment (which accordion.dtx normally re-implements as a headed
-% accordion) instead renders as a plain foldable div. The default path
-% (accordion) is owned by ximera-core's accordion.dtx.
-\ifdefined\xmNotExpandableAsAccordion
-\renewenvironment{expandable}
-  {\stepcounter{identification}\ifvmode\IgnorePar\fi\EndP
-   \HCode{<div data-original="expandable" id="foldable\arabic{identification}" class="foldable">}}
-  {\HCode{</div>}\IgnoreIndent}
-\fi
-
 \renewcommand{\unfoldable}[1]{\HCode{<span class="unfoldable">}#1\HCode{</span>}}
+
+\renewenvironment{accordion}
+  {\ifvmode\IgnorePar\fi\EndP\HCode{<div class="accordion">}}
+  {\HCode{</div>}\IgnoreIndent}
+
+\renewenvironment{accordion-item}[1][]
+  {\stepcounter{identification}\ifvmode\IgnorePar\fi\EndP
+   \HCode{<h3>}#1\HCode{</h3><div id="accordion-item\arabic{identification}" class="accordion-item">}}
+  {\HCode{</div>}\IgnoreIndent}
+
+\ifdefined\xmNotExpandableAsAccordion
+  % Opt-out path: render \begin{expandable} as a plain foldable div.
+  \renewenvironment{expandable}
+    {\stepcounter{identification}\ifvmode\IgnorePar\fi\EndP
+     \HCode{<div data-original="expandable" id="foldable\arabic{identification}" class="foldable">}}
+    {\HCode{</div>}\IgnoreIndent}
+\else
+  % Default path: \begin{expandable}{CLASS}{TITLE} renders as a headed
+  % accordion. Used by ximera-hint's expandable-wrapped hints.
+  \let\expandable\relax
+  \let\endexpandable\relax
+  \newenvironment{expandable}[2]{%
+    \stepcounter{identification}%
+    \ifvmode\IgnorePar\fi\EndP%
+    \HCode{<div class="accordion">\Hnewline}%
+    \HCode{<h3 class="#1">}#2\HCode{</h3>\Hnewline}%
+    \HCode{<div id="accordion-item\arabic{identification}" class="accordion-item #1-content">\Hnewline}%
+  }{%
+    \HCode{</div>\Hnewline</div>\Hnewline}\IgnoreIndent%
+  }
+\fi
 
 \endinput

@@ -1,15 +1,44 @@
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage{foldable}[2026/08/22 v0.1 Ximera foldable environment]
+\ProvidesPackage{foldable}[2026/08/22 v0.2 Ximera foldable / accordion / expandable]
 
-% Collapsible callout. In print mode it's a plain group (mdframed is
-% disabled in xake, per the original comment in foldable.dtx). In html
-% mode foldable.4ht wraps it in <div class="foldable">.
+% Colors referenced by mdframed styling in print mode. mdframed itself is
+% disabled during xake compiles (amsthm/mdframed conflict corrupts the
+% .jax file) but the color names are still referenced.
+\colorlet{textColor}{black}
+\colorlet{background}{white}
+
+% \begin{foldable}…\end{foldable} — a collapsible callout. Print mode is a
+% plain group; the HTML side wraps it in <div class="foldable"> and JS
+% attaches a toggle button.
 \newenvironment{foldable}{}{}
 
 % \unfoldable{TEXT} — its content stays visible even when the surrounding
-% foldable is collapsed. In print, an identity wrapper; in html, wrapped
-% in <span class="unfoldable">.
+% foldable collapses. Print: identity. HTML: <span class="unfoldable">.
 \newcommand{\unfoldable}[1]{#1}
+
+% \begin{accordion} … \end{accordion} — container for a stack of
+% accordion-items. Print mode is a no-op group; the HTML side wraps in
+% <div class="accordion">.
+\newenvironment{accordion}{}{}
+
+% \begin{accordion-item}[TITLE] … \end{accordion-item} — one accordion
+% panel. In print mode with tikzexport it renders as a plain group; the
+% non-tikz PDF path uses \paragraph{TITLE}. HTML wraps in an <h3>+<div>.
+\iftikzexport
+  \newenvironment{accordion-item}[1][]{}{}
+\else
+  \newenvironment{accordion-item}[1][]{\paragraph{#1}}{}
+\fi
+
+% \begin{expandable}{CLASS}{TITLE} … \end{expandable} — a labeled
+% collapsible. Default HTML rendering is an accordion; if the author
+% \def's \xmNotExpandableAsAccordion, it falls through to a plain
+% foldable div (see foldable.4ht).
+\ifdefined\xmNotExpandableAsAccordion
+\newenvironment{expandable}{}{}
+\else
+\newenvironment{expandable}[2]{}{}
+\fi
 
 \ifdefined\HCode\input{foldable.4ht}\fi
 \endinput

@@ -12,10 +12,12 @@
     "test": "node --test 'test/**/*.test.js'"
   },
   "peerDependencies": {
-    "ximera-core": "*"
+    "ximera-core": "*",
+    "ximera-foldable": "*"
   },
   "devDependencies": {
     "happy-dom": "^15.0.0",
-    "ximera-core": "*"
+    "ximera-core": "*",
+    "ximera-foldable": "*"
   }
 }

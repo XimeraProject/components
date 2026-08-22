@@ -1,22 +1,49 @@
-/* ximera-foldable — styling for the \begin{foldable} environment.
-
-   tex4ht emits <div class="foldable">…</div> with an id like "foldable17".
-   The original stylesheet used a font-size:0 → font-size:base transition
-   to hide/reveal content on click; that required a jQuery collapse
-   handler that isn't yet ported. This visual treatment mirrors the
-   LaTeX print-side mdframed styling described in foldable.dtx (a thin
-   muted left rule, indented content) so foldable content stays visually
-   distinguished as a callout even without collapse behavior. */
+/* ximera-foldable — collapsible aside driven by data-state on .foldable.
+   Faithful port of original-stylesheets/foldable.scss: a font-size
+   transition hides/reveals children, and .unfoldable spans keep their
+   base size so they peek through when the foldable is closed. */
 
 .foldable {
-  border-left: 3px solid var(--ximera-color-neutral-border);
+  border-left: 3px solid var(--ximera-color-neutral-border, #ccc);
   padding: 0.25em 0 0.25em 1em;
   margin: 0.75em 0;
+  transition: font-size 0.2s;
 }
 
-/* \unfoldable{TEXT} — a phrase-level inline that stays visible even if
-   the enclosing foldable collapses. With no collapse behavior wired up,
-   this is currently a semantic-only marker. */
+.foldable[data-state="closed"] {
+  font-size: 0;
+}
+
+/* \unfoldable{TEXT} — inline phrase that keeps its size even when the
+   parent foldable is collapsed. The `!important` mirrors the original
+   .scss; it wins against the closed parent's font-size:0. */
 .unfoldable {
   display: inline;
+  font-size: 1rem !important;
+}
+
+/* Toggle button injected by index.js. Floats to the right so it sits
+   above the callout's top-right corner, mirroring the original
+   .btn-hint-collapse chevron behavior. */
+.foldable-toggle {
+  float: right;
+  clear: right;
+  margin: 0.25em 0 0.25em 0.5em;
+  padding: 0.1em 0.4em;
+  background: transparent;
+  border: 1px solid var(--ximera-color-neutral-border, #ccc);
+  border-radius: 3px;
+  cursor: pointer;
+  color: inherit;
+  /* MathJax content can layer above sibling elements. */
+  position: relative;
+  z-index: 1;
+}
+
+.foldable-toggle i {
+  transition: transform 0.2s;
+}
+
+.foldable-toggle[data-state="closed"] i {
+  transform: rotate(-90deg);
 }

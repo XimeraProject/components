@@ -1,0 +1,10 @@
+{
+  "name": "ximera-foldable",
+  "version": "0.1.0",
+  "type": "module",
+  "latex": {
+    "sty": ["foldable.sty"],
+    "4ht": ["foldable.4ht"],
+    "css": ["ximera-foldable.css"]
+  }
+}

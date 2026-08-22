@@ -1,0 +1,22 @@
+/* ximera-foldable — styling for the \begin{foldable} environment.
+
+   tex4ht emits <div class="foldable">…</div> with an id like "foldable17".
+   The original stylesheet used a font-size:0 → font-size:base transition
+   to hide/reveal content on click; that required a jQuery collapse
+   handler that isn't yet ported. This visual treatment mirrors the
+   LaTeX print-side mdframed styling described in foldable.dtx (a thin
+   muted left rule, indented content) so foldable content stays visually
+   distinguished as a callout even without collapse behavior. */
+
+.foldable {
+  border-left: 3px solid var(--ximera-color-neutral-border);
+  padding: 0.25em 0 0.25em 1em;
+  margin: 0.75em 0;
+}
+
+/* \unfoldable{TEXT} — a phrase-level inline that stays visible even if
+   the enclosing foldable collapses. With no collapse behavior wired up,
+   this is currently a semantic-only marker. */
+.unfoldable {
+  display: inline;
+}

@@ -30,6 +30,16 @@
   }
 \fi
 
+%% expandable — class-side stub. Real HTML behavior is defined below
+%% in the htXimera portion (as an accordion, unless
+%% \xmNotExpandableAsAccordion is set — see foldable pilot for the
+%% not-as-accordion path).
+\ifdefined\xmNotExpandableAsAccordion
+\newenvironment{expandable}{}{}
+\else
+\newenvironment{expandable}[2]{}{}
+\fi
+
 %</classXimera>
 %    \end{macrocode}
 % On the web, these accordions result in a jquery accordion with multiple accordion-items.

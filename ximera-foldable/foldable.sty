@@ -1,0 +1,15 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{foldable}[2026/08/22 v0.1 Ximera foldable environment]
+
+% Collapsible callout. In print mode it's a plain group (mdframed is
+% disabled in xake, per the original comment in foldable.dtx). In html
+% mode foldable.4ht wraps it in <div class="foldable">.
+\newenvironment{foldable}{}{}
+
+% \unfoldable{TEXT} — its content stays visible even when the surrounding
+% foldable is collapsed. In print, an identity wrapper; in html, wrapped
+% in <span class="unfoldable">.
+\newcommand{\unfoldable}[1]{#1}
+
+\ifdefined\HCode\input{foldable.4ht}\fi
+\endinput

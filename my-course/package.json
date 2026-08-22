@@ -11,6 +11,7 @@
     "ximera-choice-util": "*",
     "ximera-core": "*",
     "ximera-dialogue": "*",
+    "ximera-foldable": "*",
     "ximera-free-response": "*",
     "ximera-hint": "*",
     "ximera-multiple-choice": "*",

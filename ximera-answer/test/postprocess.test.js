@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { load } from 'cheerio';
 import {
   extractAnswerBlanks, injectMathJaxHtmlExtension,
-  estimateTextWidthEm, parseAnswerOptions,
+  estimateTextWidthEm, parseAnswerOptions, findAnswerMatches,
 } from '../postprocess.js';
 
 describe('estimateTextWidthEm', () => {
@@ -44,6 +44,51 @@ describe('parseAnswerOptions', () => {
   it('returns {} for empty / undefined input', () => {
     assert.deepEqual(parseAnswerOptions(''), {});
     assert.deepEqual(parseAnswerOptions(undefined), {});
+  });
+});
+
+describe('findAnswerMatches (balanced-brace parser)', () => {
+  it('captures a simple value', () => {
+    const ms = findAnswerMatches('x = \\answer{7}');
+    assert.equal(ms.length, 1);
+    assert.equal(ms[0].value, '7');
+  });
+
+  it('captures a value with nested braces (\\sqrt{2})', () => {
+    const ms = findAnswerMatches('\\answer{\\sqrt{2}}');
+    assert.equal(ms.length, 1);
+    assert.equal(ms[0].value, '\\sqrt{2}');
+  });
+
+  it('captures a value with deep nesting', () => {
+    const ms = findAnswerMatches('\\answer{\\frac{1}{\\sqrt{2}}}');
+    assert.equal(ms.length, 1);
+    assert.equal(ms[0].value, '\\frac{1}{\\sqrt{2}}');
+  });
+
+  it('captures the optional argument alongside a nested value', () => {
+    const ms = findAnswerMatches('\\answer[format=symbolic]{\\sqrt{2}}');
+    assert.equal(ms.length, 1);
+    assert.equal(ms[0].optRaw, 'format=symbolic');
+    assert.equal(ms[0].value, '\\sqrt{2}');
+  });
+
+  it('honors \\{ and \\} escapes inside the value', () => {
+    const ms = findAnswerMatches('\\answer{a\\{b\\}c}');
+    assert.equal(ms.length, 1);
+    assert.equal(ms[0].value, 'a\\{b\\}c');
+  });
+
+  it('finds multiple occurrences with mixed nesting', () => {
+    const ms = findAnswerMatches('\\answer{\\sqrt{2}} + \\answer{3}');
+    assert.equal(ms.length, 2);
+    assert.equal(ms[0].value, '\\sqrt{2}');
+    assert.equal(ms[1].value, '3');
+  });
+
+  it('bails without corrupting output when braces are unbalanced', () => {
+    const ms = findAnswerMatches('\\answer{\\sqrt{2}');   // missing final `}`
+    assert.equal(ms.length, 0);
   });
 });
 
@@ -117,6 +162,31 @@ describe('extractAnswerBlanks', () => {
     const $ = load('<span class="mathjax-inline">\\(\\answer{7}\\)</span>');
     extractAnswerBlanks($);
     assert.ok($('span.mathjax-inline').html().includes('\\hspace{'));
+  });
+
+  it('handles \\answer{\\sqrt{2}} — nested braces do not orphan a close brace', () => {
+    const $ = load('<div class="mathjax-block">\\[ \\sqrt{1+1} = \\answer{\\sqrt{2}}. \\]</div>');
+    extractAnswerBlanks($);
+    const span = $('.answer.respondable');
+    assert.equal(span.attr('data-correct-text'), '\\sqrt{2}');
+    // No stray closing brace should have been left behind (the previous
+    // regex left one, producing a MathJax "extra close brace" error).
+    const mathHtml = $('div.mathjax-block').html();
+    const opens = (mathHtml.match(/\{/g) ?? []).length;
+    const closes = (mathHtml.match(/\}/g) ?? []).length;
+    assert.equal(opens, closes);
+    assert.ok(!mathHtml.includes('\\answer'));
+  });
+
+  it('emits the correct-text as raw math inside \\phantom (not \\text)', () => {
+    // The whole point of the fix: MathJax must typeset the argument as
+    // math so a radical/fraction/etc. gets its real rendered width.
+    const $ = load('<span class="mathjax-inline">\\(\\answer{\\sqrt{2}}\\)</span>');
+    extractAnswerBlanks($);
+    const mathHtml = $('span.mathjax-inline').html();
+    assert.ok(mathHtml.includes('\\phantom{\\sqrt{2}'));
+    // Older text-escaping path is gone.
+    assert.ok(!mathHtml.includes('\\text{\\textbackslash'));
   });
 
   it('assigns unique IDs across multiple spans', () => {

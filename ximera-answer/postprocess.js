@@ -47,10 +47,44 @@ export function injectMathJaxHtmlExtension($) {
   });
 }
 
-// Regex captures the optional argument (group 1) and the required value (group 2).
-// The optional bracket group is a lazy `[^\]]*` so nested brackets are not
-// supported — that matches TeX's own key=value convention (no nested [] anyway).
-const ANSWER_RE = /\\answer\s*(?:\[([^\]]*)\])?\s*\{([^}]*)\}/g;
+// Locate `\answer` plus its optional `[key=val,...]` prefix. The `{VALUE}`
+// body is NOT captured here — VALUE can nest braces (`\answer{\sqrt{2}}`),
+// so we hand-scan for the balanced close brace in findAnswerMatches below.
+const ANSWER_HEAD_RE = /\\answer\s*(?:\[([^\]]*)\])?\s*\{/g;
+
+// Scan `html` for every `\answer[opts]{VALUE}` occurrence, respecting nested
+// braces and `\{`/`\}` escapes inside VALUE. Returns [{start, end, optRaw,
+// value}] in document order. `start` is the first char of `\answer`; `end`
+// is one past the closing brace.
+export function findAnswerMatches(html) {
+  const out = [];
+  ANSWER_HEAD_RE.lastIndex = 0;
+  let m;
+  while ((m = ANSWER_HEAD_RE.exec(html)) !== null) {
+    const openIdx = m.index + m[0].length - 1;  // position of the `{`
+    let depth = 1;
+    let i = openIdx + 1;
+    while (i < html.length && depth > 0) {
+      const c = html[i];
+      if (c === '\\' && (html[i + 1] === '{' || html[i + 1] === '}')) {
+        i += 2;
+        continue;
+      }
+      if (c === '{') depth++;
+      else if (c === '}') depth--;
+      i++;
+    }
+    if (depth !== 0) break;   // unbalanced — bail rather than corrupt output
+    out.push({
+      start: m.index,
+      end: i,
+      optRaw: m[1],
+      value: html.slice(openIdx + 1, i - 1),
+    });
+    ANSWER_HEAD_RE.lastIndex = i;
+  }
+  return out;
+}
 
 // Estimate the rendered width of \text{VALUE} in em units. Per-character
 // averages tuned for math-answer content; conservative so short answers
@@ -93,15 +127,15 @@ export function extractAnswerBlanks($) {
     const isBlock = el.tagName.toLowerCase() === 'div';
     const $el = $(el);
     let html = $el.html();
-    const matches = [...html.matchAll(ANSWER_RE)];
+    const matches = findAnswerMatches(html);
     if (matches.length === 0) return;
 
     const toInsert = [];
     // Walk matches in reverse so slice indices stay valid as we replace.
     for (let i = matches.length - 1; i >= 0; i--) {
       const m = matches[i];
-      const opts = parseAnswerOptions(m[1]);
-      const correctText = m[2].trim();
+      const opts = parseAnswerOptions(m.optRaw);
+      const correctText = m.value.trim();
       const n = ++counter;
       const answerId = `ximera-answer-${n}`;
       const placeholderId = `ximera-placeholder-${n}`;
@@ -113,26 +147,23 @@ export function extractAnswerBlanks($) {
       // height. Splitting into \hphantom+\vphantom risks the id landing
       // on only one child.
       //
-      // Width: \text{VALUE} sizes the slot to the rendered text width.
-      // When narrower than MIN_BLANK_EM we append \hspace{extra} so
-      // MathJax allocates enough room for a usable field. CSS has no
-      // min-width — the phantom is authoritative.
+      // The raw VALUE is emitted verbatim inside \phantom so MathJax
+      // processes it as math — `\answer{\sqrt{2}}` yields an invisible
+      // radical of the right width. \hspace{extra} pads to MIN_BLANK_EM
+      // when the source is short (heuristic on source length; math often
+      // renders narrower than its source, so this errs wider — better
+      // than crowding the input on top).
       //
-      // Height: \vphantom{\bigg|} is a zero-width strut (~1.5em) MathJax
-      // 3 computes reliably; matches an <input> height.
-      const escapedText = correctText
-        .replace(/\\/g, '\\textbackslash{}')
-        .replace(/[{}]/g, '\\$&')
-        .replace(/[%$#&_^~]/g, '\\$&');
-
+      // \vphantom{\bigg|} is a zero-width strut (~1.5em) MathJax
+      // computes reliably; matches an <input> height.
       const extraEm = Math.max(0, MIN_BLANK_EM - estimateTextWidthEm(correctText));
       const widthContent = extraEm > 0.01
-        ? `\\text{${escapedText}}\\hspace{${extraEm.toFixed(2)}em}`
-        : `\\text{${escapedText}}`;
+        ? `${correctText}\\hspace{${extraEm.toFixed(2)}em}`
+        : correctText;
 
-      html = html.slice(0, m.index)
+      html = html.slice(0, m.start)
         + `\\cssId{${placeholderId}}{\\phantom{${widthContent}\\vphantom{\\bigg|}}}`
-        + html.slice(m.index + m[0].length);
+        + html.slice(m.end);
       toInsert.unshift({ answerId, placeholderId, correctText, opts });
     }
     $el.html(html);

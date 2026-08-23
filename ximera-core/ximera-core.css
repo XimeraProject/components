@@ -41,18 +41,20 @@
   --ximera-color-muted-fg: #555;
   --ximera-color-muted-border: #999;
 
-  /* Environment box palettes. Legacy Ximera never shipped default
-     theorem styling; courses supplied their own CSS. We ship a
-     four-palette taxonomy so a fresh course has usable boxes out of
-     the box, and expose tokens so a theme is a single override. */
-  --ximera-color-env-thm: #1976d2;         /* blue — formal statements */
-  --ximera-color-env-thm-bg: #edf4fc;
-  --ximera-color-env-def: #2e7d32;         /* green — constructive / definitional */
-  --ximera-color-env-def-bg: #eaf5ea;
-  --ximera-color-env-rem: #a1670c;         /* amber — commentary */
-  --ximera-color-env-rem-bg: #fdf6e3;
-  --ximera-color-env-warn: #c62828;        /* red — caution */
-  --ximera-color-env-warn-bg: #fdecea;
+  /* Environment box palettes. The four-palette split (formal / problem
+     / commentary / caution) and the class-to-palette mapping below
+     mirror original-stylesheets/theorems.scss so a course carried
+     forward from the legacy Ximera looks the same. Backgrounds are
+     low-saturation near-white tints (hsl(hue, ~40%, ~97%)) so the
+     border carries the identity and the box stays legible on white. */
+  --ximera-color-env-formal: #2e7d32;         /* green — theorem-family + definitional */
+  --ximera-color-env-formal-bg: #f4faf4;
+  --ximera-color-env-problem: #1976d2;        /* blue — problem-family */
+  --ximera-color-env-problem-bg: #f4f8fd;
+  --ximera-color-env-commentary: #a1670c;     /* amber — example / observation / remark */
+  --ximera-color-env-commentary-bg: #fdfaf1;
+  --ximera-color-env-caution: #c62828;        /* red — warning / paradox */
+  --ximera-color-env-caution-bg: #fdf5f4;
 
   /* Shape */
   --ximera-radius: 4px;
@@ -151,6 +153,68 @@ body h1, body h2, body h3, body h4 {
   margin-bottom: 0.4em;
 }
 
+/* Section headings in sans-serif, for a clear visual break from the
+   serif body. tex4ht wraps LaTeX sectioning commands in <hN> elements
+   with class names encoding the sectioning level (e.g. \section →
+   <h3 class="sectionHead">, \section* → <h3 class="likesectionHead">).
+   Mirrors original-stylesheets/base.scss. Sizes are set per-class
+   because tex4ht emits every level as <h3>, so relying on the tag's
+   default cascade collapses the hierarchy. */
+.titleHead,
+.partHead, .likepartHead,
+.chapterHead, .likechapterHead,
+.sectionHead, .likesectionHead,
+.subsectionHead, .likesubsectionHead,
+.subsubsectionHead, .likesubsubsectionHead,
+.paragraphHead, .likeparagraphHead,
+.subparagraphHead, .likesubparagraphHead {
+  font-family: var(--ximera-font-sans);
+  font-weight: 600;
+}
+.titleHead                                   { font-size: 2.1em; }
+.partHead,      .likepartHead                { font-size: 1.9em; }
+.chapterHead,   .likechapterHead             { font-size: 1.7em; }
+.sectionHead,   .likesectionHead             { font-size: 1.5em; }
+.subsectionHead, .likesubsectionHead         { font-size: 1.25em; }
+.subsubsectionHead, .likesubsubsectionHead   { font-size: 1.1em; }
+.paragraphHead, .likeparagraphHead,
+.subparagraphHead, .likesubparagraphHead     { font-size: 1em; }
+
+/* ─── Abstract ───────────────────────────────────────────────────────────── */
+
+/* xourse.cls and ximera.cls wrap the activity's \begin{abstract}…
+   \end{abstract} in <div class="abstract">. Style it as an italic
+   gray lead paragraph with a bold sans-serif "Abstract." label on
+   the first line — mirrors original-stylesheets/abstract.scss. */
+.abstract {
+  font-style: italic;
+  color: #555;
+  text-align: justify;
+  margin: 2em 0;
+}
+.abstract p:first-child::before {
+  content: "Abstract.";
+  font-family: var(--ximera-font-sans);
+  font-style: normal;
+  font-weight: 700;
+  padding-right: 0.5em;
+}
+.abstract:empty {
+  display: none;
+}
+
+/* ─── Images ─────────────────────────────────────────────────────────────── */
+
+/* \begin{image}…\end{image} in ximera.cls emits
+   <div class="image-environment"> containing an <img> or (for
+   tikz-exported SVGs) an <object type="image/svg+xml">. Both are
+   inline-replaced elements, so text-align on the wrapper centres
+   them. Mirrors original-stylesheets/images.scss. */
+.image-environment {
+  text-align: center;
+  margin: 1em 0;
+}
+
 /* ─── Environment boxes ──────────────────────────────────────────────────── */
 
 /* The 4ht configuration in ximeraLatex wraps every theorem-like environment
@@ -190,51 +254,53 @@ body h1, body h2, body h3, body h4 {
   margin-right: 0.4em;
 }
 
-.theorem-like.theorem::before      { content: "Theorem"; }
-.theorem-like.corollary::before    { content: "Corollary"; }
-.theorem-like.lemma::before        { content: "Lemma"; }
-.theorem-like.proposition::before  { content: "Proposition"; }
-.theorem-like.claim::before        { content: "Claim"; }
-.theorem-like.conjecture::before   { content: "Conjecture"; }
-.theorem-like.criterion::before    { content: "Criterion"; }
-.theorem-like.fact::before         { content: "Fact"; }
-.theorem-like.formula::before      { content: "Formula"; }
+.theorem-like.theorem::before      { content: "Theorem."; }
+.theorem-like.corollary::before    { content: "Corollary."; }
+.theorem-like.lemma::before        { content: "Lemma."; }
+.theorem-like.proposition::before  { content: "Proposition."; }
+.theorem-like.claim::before        { content: "Claim."; }
+.theorem-like.conjecture::before   { content: "Conjecture."; }
+.theorem-like.definition::before   { content: "Definition."; }
+.theorem-like.axiom::before        { content: "Axiom."; }
+.theorem-like.condition::before    { content: "Condition."; }
+.theorem-like.idea::before         { content: "Idea."; }
+.theorem-like.conclusion::before   { content: "Conclusion."; }
+.theorem-like.summary::before      { content: "Summary."; }
+.theorem-like.explanation::before  { content: "Explanation."; }
 
-.theorem-like.definition::before   { content: "Definition"; }
-.theorem-like.notation::before     { content: "Notation"; }
-.theorem-like.example::before      { content: "Example"; }
-.theorem-like.procedure::before    { content: "Procedure"; }
-.theorem-like.algorithm::before    { content: "Algorithm"; }
-.theorem-like.model::before        { content: "Model"; }
-.theorem-like.template::before     { content: "Template"; }
+.theorem-like.formula::before      { content: "Formula."; }
+.theorem-like.model::before        { content: "Model."; }
+.theorem-like.procedure::before    { content: "Procedure."; }
+.theorem-like.template::before     { content: "Template."; }
 
-.theorem-like.remark::before       { content: "Remark"; }
-.theorem-like.observation::before  { content: "Observation"; }
-.theorem-like.idea::before         { content: "Idea"; }
-.theorem-like.summary::before      { content: "Summary"; }
-.theorem-like.explanation::before  { content: "Explanation"; }
-.theorem-like.conclusion::before   { content: "Conclusion"; }
-.theorem-like.condition::before    { content: "Condition"; }
-.theorem-like.axiom::before        { content: "Axiom"; }
+.theorem-like.example::before      { content: "Example."; }
+.theorem-like.observation::before  { content: "Observation."; }
+.theorem-like.fact::before         { content: "Fact."; }
+.theorem-like.remark::before       { content: "Remark."; }
+.theorem-like.algorithm::before    { content: "Algorithm."; }
+.theorem-like.notation::before     { content: "Notation."; }
+.theorem-like.criterion::before    { content: "Criterion."; }
 
-.theorem-like.warning::before      { content: "Warning"; }
-.theorem-like.paradox::before      { content: "Paradox"; }
+.theorem-like.warning::before      { content: "Warning."; }
+.theorem-like.paradox::before      { content: "Paradox."; }
 
-/* Blue — formal statements. `.problem-environment.problem` joins this
-   group so an ungraded `\begin{problem}` looks like a theorem-family
-   box; the completion rule below repaints the border green when done. */
+/* Green — theorem-family and constructive/definitional.
+   Matches the "grass" palette in original-stylesheets/theorems.scss. */
 .theorem-like.theorem,
 .theorem-like.corollary,
 .theorem-like.lemma,
 .theorem-like.proposition,
 .theorem-like.claim,
 .theorem-like.conjecture,
-.theorem-like.criterion,
-.theorem-like.fact,
-.theorem-like.formula,
-.problem-environment.problem {
-  border-left-color: var(--ximera-color-env-thm);
-  background: var(--ximera-color-env-thm-bg);
+.theorem-like.definition,
+.theorem-like.axiom,
+.theorem-like.condition,
+.theorem-like.idea,
+.theorem-like.conclusion,
+.theorem-like.summary,
+.theorem-like.explanation {
+  border-left-color: var(--ximera-color-env-formal);
+  background: var(--ximera-color-env-formal-bg);
 }
 .theorem-like.theorem > .theorem-like-title,
 .theorem-like.corollary > .theorem-like-title,
@@ -242,91 +308,95 @@ body h1, body h2, body h3, body h4 {
 .theorem-like.proposition > .theorem-like-title,
 .theorem-like.claim > .theorem-like-title,
 .theorem-like.conjecture > .theorem-like-title,
-.theorem-like.criterion > .theorem-like-title,
-.theorem-like.fact > .theorem-like-title,
-.theorem-like.formula > .theorem-like-title,
+.theorem-like.definition > .theorem-like-title,
+.theorem-like.axiom > .theorem-like-title,
+.theorem-like.condition > .theorem-like-title,
+.theorem-like.idea > .theorem-like-title,
+.theorem-like.conclusion > .theorem-like-title,
+.theorem-like.summary > .theorem-like-title,
+.theorem-like.explanation > .theorem-like-title,
 .theorem-like.theorem::before,
 .theorem-like.corollary::before,
 .theorem-like.lemma::before,
 .theorem-like.proposition::before,
 .theorem-like.claim::before,
 .theorem-like.conjecture::before,
-.theorem-like.criterion::before,
-.theorem-like.fact::before,
-.theorem-like.formula::before {
-  color: var(--ximera-color-env-thm);
-}
-
-/* Green — constructive / definitional. */
-.theorem-like.definition,
-.theorem-like.notation,
-.theorem-like.example,
-.theorem-like.procedure,
-.theorem-like.algorithm,
-.theorem-like.model,
-.theorem-like.template {
-  border-left-color: var(--ximera-color-env-def);
-  background: var(--ximera-color-env-def-bg);
-}
-.theorem-like.definition > .theorem-like-title,
-.theorem-like.notation > .theorem-like-title,
-.theorem-like.example > .theorem-like-title,
-.theorem-like.procedure > .theorem-like-title,
-.theorem-like.algorithm > .theorem-like-title,
-.theorem-like.model > .theorem-like-title,
-.theorem-like.template > .theorem-like-title,
 .theorem-like.definition::before,
-.theorem-like.notation::before,
-.theorem-like.example::before,
-.theorem-like.procedure::before,
-.theorem-like.algorithm::before,
-.theorem-like.model::before,
-.theorem-like.template::before {
-  color: var(--ximera-color-env-def);
-}
-
-/* Amber — commentary. */
-.theorem-like.remark,
-.theorem-like.observation,
-.theorem-like.idea,
-.theorem-like.summary,
-.theorem-like.explanation,
-.theorem-like.conclusion,
-.theorem-like.condition,
-.theorem-like.axiom {
-  border-left-color: var(--ximera-color-env-rem);
-  background: var(--ximera-color-env-rem-bg);
-}
-.theorem-like.remark > .theorem-like-title,
-.theorem-like.observation > .theorem-like-title,
-.theorem-like.idea > .theorem-like-title,
-.theorem-like.summary > .theorem-like-title,
-.theorem-like.explanation > .theorem-like-title,
-.theorem-like.conclusion > .theorem-like-title,
-.theorem-like.condition > .theorem-like-title,
-.theorem-like.axiom > .theorem-like-title,
-.theorem-like.remark::before,
-.theorem-like.observation::before,
-.theorem-like.idea::before,
-.theorem-like.summary::before,
-.theorem-like.explanation::before,
-.theorem-like.conclusion::before,
+.theorem-like.axiom::before,
 .theorem-like.condition::before,
-.theorem-like.axiom::before {
-  color: var(--ximera-color-env-rem);
+.theorem-like.idea::before,
+.theorem-like.conclusion::before,
+.theorem-like.summary::before,
+.theorem-like.explanation::before {
+  color: var(--ximera-color-env-formal);
 }
 
-/* Red — caution. */
+/* Blue — problem-family. `.problem-environment.NAME` is emitted for
+   the four question-environments defined in problem.dtx (problem,
+   exercise, question, exploration); the four theorem-like envs below
+   (formula, model, procedure, template) were "sky" in the original
+   palette and belong here too. */
+.theorem-like.formula,
+.theorem-like.model,
+.theorem-like.procedure,
+.theorem-like.template,
+.problem-environment.problem,
+.problem-environment.exercise,
+.problem-environment.question,
+.problem-environment.exploration {
+  border-left-color: var(--ximera-color-env-problem);
+  background: var(--ximera-color-env-problem-bg);
+}
+.theorem-like.formula > .theorem-like-title,
+.theorem-like.model > .theorem-like-title,
+.theorem-like.procedure > .theorem-like-title,
+.theorem-like.template > .theorem-like-title,
+.theorem-like.formula::before,
+.theorem-like.model::before,
+.theorem-like.procedure::before,
+.theorem-like.template::before {
+  color: var(--ximera-color-env-problem);
+}
+
+/* Amber — commentary / example ("sun" in the original palette). */
+.theorem-like.example,
+.theorem-like.observation,
+.theorem-like.fact,
+.theorem-like.remark,
+.theorem-like.algorithm,
+.theorem-like.notation,
+.theorem-like.criterion {
+  border-left-color: var(--ximera-color-env-commentary);
+  background: var(--ximera-color-env-commentary-bg);
+}
+.theorem-like.example > .theorem-like-title,
+.theorem-like.observation > .theorem-like-title,
+.theorem-like.fact > .theorem-like-title,
+.theorem-like.remark > .theorem-like-title,
+.theorem-like.algorithm > .theorem-like-title,
+.theorem-like.notation > .theorem-like-title,
+.theorem-like.criterion > .theorem-like-title,
+.theorem-like.example::before,
+.theorem-like.observation::before,
+.theorem-like.fact::before,
+.theorem-like.remark::before,
+.theorem-like.algorithm::before,
+.theorem-like.notation::before,
+.theorem-like.criterion::before {
+  color: var(--ximera-color-env-commentary);
+}
+
+/* Red — caution ("blood" in the original palette). */
 .theorem-like.warning,
 .theorem-like.paradox {
-  border-left-color: var(--ximera-color-env-warn);
-  background: var(--ximera-color-env-warn-bg);
+  border-left-color: var(--ximera-color-env-caution);
+  background: var(--ximera-color-env-caution-bg);
 }
 .theorem-like.warning > .theorem-like-title,
 .theorem-like.paradox > .theorem-like-title,
 .theorem-like.warning::before,
 .theorem-like.paradox::before {
-  color: var(--ximera-color-env-warn);
+  color: var(--ximera-color-env-caution);
 }
 
 /* Proof — no box, italic prelude, terminal ∎. The 4ht wraps it in the

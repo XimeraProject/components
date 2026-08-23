@@ -108,6 +108,13 @@
 \DeclareOption*{%
   \PassOptionsToClass{\CurrentOption}{article}%
 }
+% Default body text to 12pt so the LaTeX side matches the HTML body
+% font-size (ximera-core.css sets body { font-size: 12pt }). This
+% keeps text embedded in tikz-exported SVGs the same visual size as
+% the surrounding prose. Users can still override via
+% \documentclass[10pt]{ximera} etc. — article's option handler lets
+% the later size win.
+\PassOptionsToClass{12pt}{article}
 \ProcessOptions\relax
 \LoadClass{article}
 

@@ -135,7 +135,7 @@ body {
   max-width: var(--ximera-content-width);
   margin: 0 auto;
   padding: 1.5em 1.5em 4em;
-  font-size: 1.05rem;
+  font-size: 12pt;
   line-height: 1.55;
   color: #222;
   background: #fff;

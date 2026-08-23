@@ -1,44 +1,77 @@
 % \subsubsection{TikZ export}
-% 2024: We DON NOT ANYMORE generate SVGs and PNGs for any TikZ images, via the
-% ``externalize'' feature of TikZ.
-%
-% Previously TikZ didn't compile natively into the website because of
-% how the xake bake compilation works.  In order to make Tikz work,
-% you need to get the tool \verb|mutool| on the machine that is
-% performing \verb|xake bake|.
+% We generate one SVG per TikZ picture using TikZ's ``externalize''
+% feature: in the pdflatex pass, each picture is compiled to its own
+% PDF via a nested pdflatex invocation, then converted to SVG with
+% \verb|pdftocairo|. In the htlatex pass, TikZ sees the pre-existing
+% SVG files (\verb|mode=graphics if exists|) and replaces each picture
+% with \verb|\includegraphics{...svg}|, which tex4ht turns into an
+% \verb|<img>| tag. This side-steps tex4ht's own tikz conversion, which
+% produces structurally invalid SVGs for pgfplots and TikZ matrices.
 %    \begin{macrocode}
 %<*classXimera>
-% everything skipped, assumle TeX4ht does the jjb now
-\ifdefined\reallyneverever
-
 \ifdefined\HCode
   \tikzexporttrue
 \fi
 
 \iftikzexport
+  % Old tkz-euclide (v2.x) users still write \usetkzobj{all} in their
+  % preambles, but tkz-euclide v3+ preloads everything and no longer
+  % defines the macro. In the child compile below (nonstopmode), the
+  % undefined \usetkzobj is silently dropped by TeX's error recovery
+  % but its brace-argument survives as ordinary tokens and gets typeset
+  % into the picture. Stub it to a no-op so the "all" doesn't bleed
+  % into the SVG. Scoped to tikzexport passes only.
+  \providecommand{\usetkzobj}[1]{}
+
   \usetikzlibrary{external}
 
   \ifdefined\HCode
-    % in htlatex, just include the svg files
-    \def\pgfsys@imagesuffixlist{.svg}
-    
+    % In htlatex, the pdflatex pass has already produced .pdf+.svg for each
+    % tikzpicture. We want tikz's `mode=graphics if exists' to detect the
+    % .svg (via \pgfsys@imagesuffixlist) and its include-external handler
+    % to emit \includegraphics{...svg}, so tex4ht's \Configure{graphics*}{svg}
+    % (loaded by the svg- option in \Preamble{...}) fires and produces an
+    % <object type="image/svg+xml">. Defer the handler override to
+    % \AtBeginDocument because tex4ht's tikz-hooks.4ht installs a .pdf-based
+    % handler late (via \:AtEndOfPackage on tikz.sty, replayed after every
+    % tikz-adjacent \RequirePackage).
+    \def\pgfsys@imagesuffixlist{.svg:}%
+    \def\ximera@setincludeexternal{%
+      \pgfkeys{/pgf/images/include external/.code={\includegraphics{##1.svg}}}%
+    }%
+    \AtBeginDocument{\ximera@setincludeexternal}%
     \tikzexternalize[prefix=./,mode=graphics if exists]
   \else
-    % in pdflatex, actually generate the svg files
+    % In pdflatex, generate one SVG per picture by running a child pdflatex
+    % compile (which produces a tightly-cropped one-page PDF via pgf's own
+    % \pdfpageheight/\pdfpagewidth adjustment), then converting the PDF to
+    % SVG with dvisvgm --pdf. --font-format=woff2 keeps glyphs as selectable
+    % text (embedding fonts as WOFF2) rather than converting them to path
+    % outlines.
+    %
+    % Why not `latex + dvisvgm on DVI`: pgf's pgfsys-dvisvgm.def emits a
+    % `dvisvgm:bbox fix ... lock` special that pins the SVG bbox to pgf's
+    % own picture-bounds computation, which for pgfplots is oversized (it
+    % includes the axis-label reservation area even when no outer tick
+    % labels are drawn). The lock prevents dvisvgm's own --exact-bbox
+    % from tightening the result, so we get a large blank band below the
+    % plot. dvisvgm's --pdf mode reads the PDF's CropBox instead and gives
+    % us a tight SVG.
+    %
+    % nonstopmode (not batch/halt-on-error) so the child compile survives
+    % preamble warnings the same way the main compile does. If we halted
+    % on any error, common preamble quirks (e.g. \usetkzobj{all} in older
+    % tkz-euclide callers) would abort every picture even though the
+    % picture itself is fine and the main compile keeps going.
     \tikzset{
       /tikz/external/system call={
         pdflatex \tikzexternalcheckshellescape
-        -halt-on-error -interaction=batchmode
+        -interaction=nonstopmode
         -jobname "\image" "\\PassOptionsToClass{tikzexport}{ximera}\texsource";
-        mutool draw -F svg \image.pdf > \image.svg ;     % mutool adds "1" to filename ????
-        mutool draw -o \image.svg \image.pdf ;
-        mutool draw -r 150 -c rgbalpha -o \image.png \image.pdf ;
-        ebb -x \image.png
+        dvisvgm --pdf --font-format=woff2 -o \image.svg \image.pdf
       }
     }
     \tikzexternalize[optimize=false,prefix=./]
-  \fi
-
   \fi
 \fi
 %</classXimera>

@@ -363,6 +363,15 @@ async function mountPhaseB(el, dispatchFn) {
 // ─── Popover (live math preview) ───────────────────────────────────────────
 
 async function updatePopover(input, popover, format) {
+  // A pending debounced call can fire AFTER a Check that marked the
+  // answer correct — the render disables the input and hides the
+  // popover, and 300 ms later this handler would repaint it. The
+  // disabled input can no longer receive blur, so nothing would hide
+  // it again. Treat "input disabled" as "hide, never repaint".
+  if (input.disabled) {
+    popover.hidden = true;
+    return;
+  }
   const text = (input.value ?? '').trim();
   if (text === '' || format === 'string') {
     popover.hidden = true;

@@ -343,3 +343,24 @@ test('popover: symbolic input unhides popover; numeric-only keeps it hidden', as
   assert.equal(popover.hidden, false);
   assert.ok(popover.textContent.startsWith('\\('));
 });
+
+// A pending debounced popover call that fires AFTER the student's
+// correct-answer render must not re-show the popover on the now-disabled
+// input — the input can't be blurred back, so nothing else would hide it.
+test('popover: correct answer hides popover even against a pending debounce', async () => {
+  await setup(symbolicFixture());
+  const input = document.querySelector('.ximera-answer-input');
+  const popover = document.querySelector('.ximera-math-popover');
+
+  // Type a symbolic value and immediately click Check — the input event
+  // schedules updatePopover for +300ms, and the click marks the answer
+  // correct within that window.
+  typeAndCheck('a-3', 'x+x');
+  const { model } = inspect();
+  assert.equal(model['a-3'].correct, true);
+  assert.equal(input.disabled, true);
+
+  // Let the debounced popover callback fire; it must NOT re-show.
+  await new Promise(r => setTimeout(r, 320));
+  assert.equal(popover.hidden, true);
+});

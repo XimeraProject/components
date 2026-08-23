@@ -67,16 +67,24 @@
 .multiple-choice .choice[data-state~="eliminated"] {
   opacity: 0.45;
   cursor: default;
-  text-decoration: line-through;
   pointer-events: none;
 }
 
-.multiple-choice[data-state~="correct"] .choice.correct,
-.multiple-choice .choice[data-state~="revealed"] {
+/* When the problem is correct, highlight ONLY the correct choice and fade
+   every other choice so attention lands on the answer. Mirrors the
+   `\answer{}` UX: the Check button stays visible and paints its ✓ badge
+   from data-state="correct" (styled in ximera-core.css). */
+.multiple-choice[data-state~="correct"] .choice.correct {
   background: var(--ximera-color-correct-bg);
   border-color: var(--ximera-color-correct);
   color: var(--ximera-color-correct);
   z-index: 1;
+}
+
+.multiple-choice[data-state~="correct"] .choice:not(.correct) {
+  opacity: 0.45;
+  cursor: default;
+  pointer-events: none;
 }
 
 .multiple-choice .ximera-check-btn {

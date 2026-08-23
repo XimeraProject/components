@@ -62,7 +62,7 @@ test('spec 2: incorrect submission → attempted, choice eliminated', async () =
   assert.equal(ca.dataset.state.includes('eliminated'), true);
 });
 
-test('spec 3: correct submission → complete + propagation, check button hidden', async () => {
+test('spec 3: correct submission → complete + propagation, Check flips to correct badge', async () => {
   const { agent } = await setup(primes);
   clickChoice('c-b');
   clickCheck();
@@ -72,7 +72,12 @@ test('spec 3: correct submission → complete + propagation, check button hidden
   assert.equal(model['p-1'].complete, true);
   assert.equal(agent.lastProgress, 1);
   const btn = document.querySelector('.ximera-check-btn');
-  assert.equal(btn.style.display, 'none');
+  assert.notEqual(btn.style.display, 'none');
+  assert.equal(btn.dataset.state, 'correct');
+  // Only the actually-correct choice is highlighted; others are not marked revealed.
+  assert.equal(document.getElementById('c-a').dataset.state.includes('revealed'), false);
+  assert.equal(document.getElementById('c-b').dataset.state.includes('revealed'), false);
+  assert.equal(document.getElementById('c-c').dataset.state.includes('revealed'), false);
 });
 
 test('spec 4: persistence round-trip preserves state', async () => {
@@ -88,7 +93,9 @@ test('spec 4: persistence round-trip preserves state', async () => {
   assert.equal(model['mc-1'].correct, true);
   assert.equal(model['mc-1'].wrong['c-a'], true);
   assert.equal(model['p-1'].complete, true);
-  assert.equal(document.querySelector('.ximera-check-btn').style.display, 'none');
+  const btn = document.querySelector('.ximera-check-btn');
+  assert.notEqual(btn.style.display, 'none');
+  assert.equal(btn.dataset.state, 'correct');
 });
 
 test('spec 5: reset from completed → first-visit', async () => {
@@ -100,7 +107,9 @@ test('spec 5: reset from completed → first-visit', async () => {
   const { model } = inspect();
   assert.equal(model['mc-1'], undefined);
   assert.equal(agent.lastProgress, 0);
-  assert.equal(document.querySelector('.ximera-check-btn').style.display, '');
+  const btn = document.querySelector('.ximera-check-btn');
+  assert.equal(btn.style.display, '');
+  assert.equal(btn.dataset.state, '');
   for (const c of document.querySelectorAll('.choice')) {
     assert.equal(c.dataset.state, '');
   }
@@ -160,8 +169,12 @@ test('spec 8: reload with persisted seed → DOM matches shuffle(ids, seed)', as
   assert.deepEqual(domOrder, expectedOrder);
 
   // The correct answer is at the position seed 123 placed it — and the
-  // learner's chosen id (c-b) is still selected + correct.
+  // learner's chosen id (c-b) is still selected.
   assert.equal(document.getElementById('c-b').dataset.state.includes('selected'), true);
+  // The Check button paints its correct badge; nothing is hidden.
+  const btn = document.querySelector('.ximera-check-btn');
+  assert.notEqual(btn.style.display, 'none');
+  assert.equal(btn.dataset.state, 'correct');
 });
 
 test('spec 9: reset on a shuffled problem clears seed → next mount reshuffles', async () => {

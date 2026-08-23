@@ -74,12 +74,21 @@
   z-index: 1;
 }
 
-.select-all[data-state~="correct"] .choice.correct,
-.select-all .choice[data-state~="revealed"] {
+/* When the problem is correct, highlight ONLY the correct choices and fade
+   the incorrect ones so attention lands on the answer. Mirrors the
+   `\answer{}` UX: the Check button stays visible and paints its ✓ badge
+   from data-state="correct" (styled in ximera-core.css). */
+.select-all[data-state~="correct"] .choice.correct {
   background: var(--ximera-color-correct-bg);
   border-color: var(--ximera-color-correct);
   color: var(--ximera-color-correct);
   z-index: 1;
+}
+
+.select-all[data-state~="correct"] .choice:not(.correct) {
+  opacity: 0.45;
+  cursor: default;
+  pointer-events: none;
 }
 
 .select-all .ximera-check-btn {

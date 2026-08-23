@@ -69,12 +69,9 @@ registerRender('.select-all', (el, entry) => {
   el.querySelectorAll('.choice').forEach((choice) => {
     const cp = [];
     if (chosenSet.has(choice.id)) cp.push('selected');
-    if (entry.correct) cp.push('revealed');
     choice.dataset.state = cp.join(' ');
     choice.setAttribute('aria-checked', chosenSet.has(choice.id) ? 'true' : 'false');
   });
-
-  if (btn) btn.style.display = entry.correct ? 'none' : '';
 });
 
 // ─── Mount ─────────────────────────────────────────────────────────────────

@@ -64,12 +64,9 @@ registerRender('.multiple-choice', (el, entry) => {
     const cp = [];
     if (choice.id === entry.chosen) cp.push('selected');
     if (entry.wrong?.[choice.id]) cp.push('eliminated');
-    if (entry.correct) cp.push('revealed');
     choice.dataset.state = cp.join(' ');
     choice.setAttribute('aria-checked', choice.id === entry.chosen ? 'true' : 'false');
   });
-
-  if (btn) btn.style.display = entry.correct ? 'none' : '';
 });
 
 // ─── Mount ─────────────────────────────────────────────────────────────────

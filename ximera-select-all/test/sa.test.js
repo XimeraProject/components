@@ -40,7 +40,7 @@ test('spec 1: bootstrap fresh — check button appended once', async () => {
   assert.equal(document.querySelectorAll('.ximera-check-btn').length, 1);
 });
 
-test('spec 2: toggle c-a and c-c, check → correct + complete', async () => {
+test('spec 2: toggle c-a and c-c, check → correct + complete, Check flips to correct badge', async () => {
   const { agent } = await setup(primes);
   toggle('c-a'); toggle('c-c'); check();
   const { model } = inspect();
@@ -49,7 +49,12 @@ test('spec 2: toggle c-a and c-c, check → correct + complete', async () => {
   assert.equal(model['p-1'].complete, true);
   assert.equal(agent.lastProgress, 1);
   const btn = document.querySelector('.ximera-check-btn');
-  assert.equal(btn.style.display, 'none');
+  assert.notEqual(btn.style.display, 'none');
+  assert.equal(btn.dataset.state, 'correct');
+  // Nothing gains a 'revealed' data-state — CSS drives highlight via .correct.
+  for (const c of document.querySelectorAll('.choice')) {
+    assert.equal(c.dataset.state.includes('revealed'), false);
+  }
 });
 
 test('spec 3: toggle c-a and c-b, check → incorrect (mismatched set)', async () => {
@@ -107,7 +112,9 @@ test('spec 8: reset from completed → first-visit', async () => {
   dispatch({ type: 'RESET_WORK' });
   const { model } = inspect();
   assert.equal(model['sa-1'], undefined);
-  assert.equal(document.querySelector('.ximera-check-btn').style.display, '');
+  const btn = document.querySelector('.ximera-check-btn');
+  assert.equal(btn.style.display, '');
+  assert.equal(btn.dataset.state, '');
   assert.equal(agent.lastProgress, 0);
 });
 

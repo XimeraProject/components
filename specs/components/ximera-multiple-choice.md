@@ -79,7 +79,7 @@ Mount steps:
 | Click choice `c-a` (fresh) | `SELECT {problemId, choiceId:"c-a"}` | `{ chosen: "c-a" }` | `.multiple-choice[data-state=""]`; `.choice#c-a[data-state="selected"]`; check button enabled |
 | Click Check | `CHECK {problemId}` | `{ chosen, checked: "c-a", correct: false, complete: false, wrong: {"c-a": true} }` | `data-state="attempted"`; `#c-a[data-state="selected eliminated"]`; check button re-enabled but greyed until new selection |
 | Click choice `c-b` (correct) | `SELECT` | `{ chosen: "c-b", checked: "c-a", wrong: {…} }` | `#c-b[data-state="selected"]`; `#c-a[data-state="eliminated"]` (not selected anymore) |
-| Click Check | `CHECK` | `{ chosen, checked: "c-b", correct: true, complete: true, wrong }` | `data-state="correct"`; `.choice[data-state="…revealed"]` on all correct choices; check button hidden; kernel propagates to problem-environment |
+| Click Check | `CHECK` | `{ chosen, checked: "c-b", correct: true, complete: true, wrong }` | `.multiple-choice[data-state="correct"]`; the Check button gains `data-state="correct"` and paints its green ✓ badge (styled in ximera-core.css) — it stays visible; CSS highlights only the `.choice.correct` and fades the rest; kernel propagates to problem-environment |
 
 ## 6. Completion
 
@@ -98,12 +98,14 @@ registerRender('.multiple-choice', (el, entry) => {
     const cp = [];
     if (choice.id === entry.chosen) cp.push('selected');
     if (entry.wrong?.[choice.id]) cp.push('eliminated');
-    if (entry.correct) cp.push('revealed');
     choice.dataset.state = cp.join(' ');
   });
-
-  const btn = el.querySelector('.ximera-check-btn');
-  if (btn) btn.style.display = entry.correct ? 'none' : '';
+  // Note: the Check button is NOT hidden on correct. syncAnswerableState
+  // (called via the shared kernel helper) sets data-state="correct" on
+  // both the outer .multiple-choice and the button, and the button's
+  // shared correct-state chrome (ximera-core.css) paints a green ✓ badge.
+  // Non-correct choices are visually faded via a CSS rule keyed off
+  // `.multiple-choice[data-state~="correct"] .choice:not(.correct)`.
 });
 ```
 
@@ -167,7 +169,7 @@ Given a fixture without shuffle:
 |---|---|---|
 | 1 | Bootstrap fresh | Check button appended (marker-class present exactly once); mc-1 entry undefined; problem p-1 available |
 | 2 | Click c-a, click Check | `mc-1: { chosen: "c-a", checked: "c-a", correct: false, complete: false, wrong: { "c-a": true } }`; `#c-a[data-state="selected eliminated"]` |
-| 3 | Click c-b, click Check | `mc-1: { chosen: "c-b", checked: "c-b", correct: true, complete: true, wrong: { "c-a": true } }`; `p-1.complete === true`; check button hidden |
+| 3 | Click c-b, click Check | `mc-1: { chosen: "c-b", checked: "c-b", correct: true, complete: true, wrong: { "c-a": true } }`; `p-1.complete === true`; check button stays visible, `dataset.state === "correct"` (paints ✓ badge); no choice carries a `revealed` data-state |
 | 4 | Persistence round-trip from state 3 | DOM restored to state 3 |
 | 5 | Reset from state 3 | `mc-1` entry cleared; DOM back to state 1; check button re-visible; `agent.setProgress(0)` called |
 | 6 | Restore-replay | Render twice, DOM byte-identical |
@@ -177,5 +179,5 @@ Given a shuffled fixture (`.shuffle` on `.multiple-choice`):
 | # | Action | Assert |
 |---|---|---|
 | 7 | Bootstrap fresh | Mount dispatched `SHUFFLE_INIT`; `mc-1.seed` is a uint32; `.choice` DOM order matches `shuffle([c-a, c-b, c-c], seed)` per §9 algorithm |
-| 8 | Reload with persisted `{ mc-1: { seed: 123, chosen: "c-b", checked: "c-b", correct: true, complete: true } }` | DOM order matches `shuffle([c-a, c-b, c-c], 123)` computed by the §9 algorithm (test invokes the same function to get the expected order); `c-b[data-state="selected revealed"]`; **the correct answer is where the learner clicked it last time — the whole point of the persisted seed** |
+| 8 | Reload with persisted `{ mc-1: { seed: 123, chosen: "c-b", checked: "c-b", correct: true, complete: true } }` | DOM order matches `shuffle([c-a, c-b, c-c], 123)` computed by the §9 algorithm (test invokes the same function to get the expected order); `c-b[data-state="selected"]`; check button `dataset.state === "correct"`; **the correct answer is where the learner clicked it last time — the whole point of the persisted seed** |
 | 9 | Reset a shuffled problem | Entry cleared; on the next mount, a fresh seed is generated → NEW shuffle order → learner sees a re-permuted problem. This is intentional; documented in the reset confirmation. |

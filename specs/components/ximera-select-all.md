@@ -61,7 +61,7 @@ Mount steps identical to mc §5 steps 1–2 (shuffle init), then:
 |---|---|---|---|
 | Click c-a (empty → in) | `TOGGLE { problemId, choiceId:"c-a" }` | `chosen: ["c-a"]` | `#c-a[data-state="selected"]` |
 | Click c-a again | `TOGGLE` | `chosen: []` | `#c-a[data-state=""]` |
-| Click c-a, c-c; Check | `CHECK` | `checked: ["c-a","c-c"], correct: true, complete: true` (if `.correct` set matches) | `data-state="correct"`; all `.correct` `.choice`s get `data-state="… revealed"` |
+| Click c-a, c-c; Check | `CHECK` | `checked: ["c-a","c-c"], correct: true, complete: true` (if `.correct` set matches) | `.select-all[data-state="correct"]`; the Check button gains `data-state="correct"` and paints its green ✓ badge (styled in ximera-core.css) — it stays visible; CSS highlights `.choice.correct` and fades every `.choice:not(.correct)` |
 | Click c-a, c-b; Check | `CHECK` | `checked: ["c-a","c-b"], correct: false, complete: false` | `data-state="attempted"`; toggles remain enabled; learner can adjust and re-Check |
 
 ## 6. Completion
@@ -81,13 +81,14 @@ registerRender('.select-all', (el, entry) => {
   el.querySelectorAll('.choice').forEach(choice => {
     const cp = [];
     if (chosenSet.has(choice.id)) cp.push('selected');
-    if (entry.correct) cp.push('revealed');
     choice.dataset.state = cp.join(' ');
     choice.setAttribute('aria-checked', chosenSet.has(choice.id) ? 'true' : 'false');
   });
-
-  const btn = el.querySelector('.ximera-check-btn');
-  if (btn) btn.style.display = entry.correct ? 'none' : '';
+  // Note: the Check button is NOT hidden on correct. syncAnswerableState
+  // sets data-state="correct" on both the outer .select-all and the
+  // button; ximera-core.css paints the button's green ✓ badge.
+  // Non-correct choices are visually faded via
+  // `.select-all[data-state~="correct"] .choice:not(.correct)`.
 });
 ```
 
@@ -120,12 +121,12 @@ Given a fixture with two correct answers:
 | # | Action | Assert |
 |---|---|---|
 | 1 | Bootstrap fresh | Check button appended once |
-| 2 | Toggle c-a, toggle c-c, Check | `sa-1.correct === true, complete === true`; `p-1.complete === true`; check button hidden |
+| 2 | Toggle c-a, toggle c-c, Check | `sa-1.correct === true, complete === true`; `p-1.complete === true`; check button stays visible, `dataset.state === "correct"` (paints ✓ badge); no choice carries a `revealed` data-state |
 | 3 | Toggle c-a, toggle c-b, Check | `correct === false, complete === false`; `data-state="attempted"`; learner can continue |
 | 4 | From state 3, toggle c-b off, toggle c-c on, Check | `correct === true, complete === true` |
 | 5 | From state 3 (attempted), toggle c-b off — no Check | `chosen: ["c-a"]`; `checked` still `["a","b"]` from state 3; `correct` still false; `complete` false (unchanged); `data-state="attempted"` still |
 | 6 | Toggle a choice while correct | No-op (component reducer returns same reference) |
 | 7 | Persistence round-trip from state 2 | DOM restored exactly |
-| 8 | Reset from state 2 | Entry cleared; check button re-visible |
+| 8 | Reset from state 2 | Entry cleared; check button `dataset.state === ""` (badge cleared, back to first-visit chrome) |
 | 9 | Restore-replay | Render twice, DOM byte-identical |
 | 10 | Set-equality: chosen `[c-c, c-a]` equals `[c-a, c-c]` | Correct — order-insensitive |

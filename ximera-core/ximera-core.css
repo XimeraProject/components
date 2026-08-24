@@ -180,6 +180,49 @@ body h1, body h2, body h3, body h4 {
 .paragraphHead, .likeparagraphHead,
 .subparagraphHead, .likesubparagraphHead     { font-size: 1em; }
 
+/* ─── Bookkeeping wrappers emitted by tex4ht ─────────────────────────────── */
+
+/* .preamble carries the <script type="math/tex"> block of MathJax \newcommand
+   declarations tex4ht emits at the top of every page. It's runtime-only —
+   MathJax reads the script content and mounts nothing visible — but the div
+   itself is still in the flow. Force it invisible so it can never leak
+   whitespace or a stray text-node between the maketitle and the first
+   heading. */
+.preamble {
+  display: none;
+}
+
+/* Empty tex4ht wrapper: \maketitle produces <div class="maketitle"></div>
+   with nothing inside (title comes through the <h3 class="likesectionHead">
+   that follows). Kill its top margin so the section heading sits flush. */
+.maketitle:empty {
+  display: none;
+}
+
+/* .ximera-label is tex4ht's anchor for \label{...}: <a id="key"></a> —
+   always empty, purely a scroll target. Should never be visible. */
+a.ximera-label {
+  display: inline;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Cross-references (\ref{key}) render as <a class="reference"> whose text
+   content is the raw label key, because tex4ht in one-pass mode can't
+   resolve the label number. Style it as a subtle link so it doesn't
+   dominate visually, and drop the underline decoration in favour of a
+   colored on-hover reveal. */
+a.reference {
+  color: var(--ximera-color-primary);
+  text-decoration: none;
+  border-bottom: 1px dotted currentColor;
+}
+a.reference:hover,
+a.reference:focus {
+  text-decoration: none;
+  border-bottom-style: solid;
+}
+
 /* ─── Abstract ───────────────────────────────────────────────────────────── */
 
 /* xourse.cls and ximera.cls wrap the activity's \begin{abstract}…
@@ -201,6 +244,83 @@ body h1, body h2, body h3, body h4 {
 }
 .abstract:empty {
   display: none;
+}
+
+/* ─── Math ───────────────────────────────────────────────────────────────── */
+
+/* Display math from `\[…\]` or `$$…$$` is wrapped in <div class="mathjax-block">.
+   Give it consistent vertical rhythm — MathJax's own container adds 1em of
+   inner margin, which combined with body p's 0.6em produces uneven gaps
+   depending on whether the preceding element is a paragraph or another
+   block. Setting explicit symmetric margins here plus text-align:center
+   matches AMS conventions. */
+.mathjax-block {
+  margin: 0.9em 0;
+  text-align: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Equation environments (align, gather, etc.) — same rhythm as .mathjax-block
+   but tex4ht wraps them one level higher in <div class="mathjax-env mathjax-equation">. */
+.mathjax-env {
+  margin: 0.9em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Inline math must not disturb line-height — MathJax's CHTML container is
+   inline-block, and its default vertical-align can push line-boxes when the
+   fraction/matrix is tall. Force baseline alignment. */
+.mathjax-inline {
+  vertical-align: baseline;
+}
+
+/* ─── Lists ──────────────────────────────────────────────────────────────── */
+
+/* tex4ht emits <ol class="enumerate1"> or <ul class="itemize1"> at the outer
+   level and <li class="enumerate"> / <li class="itemize"> for items. Give
+   them a modest indent and item spacing that lines up with body paragraph
+   rhythm. Nested lists inherit smaller padding automatically. */
+ol.enumerate1,
+ul.itemize1,
+ol.enumerate2,
+ul.itemize2,
+ol.enumerate3,
+ul.itemize3 {
+  padding-left: 1.8em;
+  margin: 0.6em 0;
+}
+
+li.enumerate,
+li.itemize {
+  margin: 0.3em 0;
+}
+
+/* Paragraph inside a list item — kill the outer margin so the item's own
+   spacing controls the rhythm; the inner <p class="noindent"> tex4ht emits
+   would otherwise double the gap. */
+li.enumerate > p,
+li.itemize > p {
+  margin: 0;
+}
+
+/* ─── Utility wrappers from tex4ht ───────────────────────────────────────── */
+
+/* `.center` wraps \begin{center}…\end{center} content — text-align on the
+   wrapper is enough for text; block children (images, math) are handled by
+   their own margins. */
+.center {
+  text-align: center;
+  margin: 0.9em 0;
+}
+
+/* .noindent is tex4ht's marker for \noindent paragraphs. LaTeX suppresses
+   the first-line indent; on the web we don't indent paragraphs at all, so
+   .noindent is a no-op selector — but keep it explicit so future themes
+   that DO indent (text-indent on `p`) can zero it out here. */
+p.noindent {
+  text-indent: 0;
 }
 
 /* ─── Images ─────────────────────────────────────────────────────────────── */
@@ -229,12 +349,34 @@ body h1, body h2, body h3, body h4 {
    palettes. Courses override --ximera-color-env-* to retheme. */
 
 .theorem-like,
-.problem-environment.problem {
+.problem-environment.problem,
+.problem-environment.exercise,
+.problem-environment.question,
+.problem-environment.exploration {
   border-left: 4px solid var(--ximera-color-neutral-border);
   background: var(--ximera-color-neutral-bg);
   padding: 0.5em 0.8em;
   margin: 1em 0;
   border-radius: 0 var(--ximera-radius) var(--ximera-radius) 0;
+}
+
+/* First/last child margin collapse — don't let the first paragraph or
+   display-math block push a tall gap between the env-name label and
+   the box top, and don't let the last one add trailing space below
+   the box body. */
+.theorem-like > :first-child,
+.problem-environment.problem > :first-child,
+.problem-environment.exercise > :first-child,
+.problem-environment.question > :first-child,
+.problem-environment.exploration > :first-child {
+  margin-top: 0;
+}
+.theorem-like > :last-child,
+.problem-environment.problem > :last-child,
+.problem-environment.exercise > :last-child,
+.problem-environment.question > :last-child,
+.problem-environment.exploration > :last-child {
+  margin-bottom: 0;
 }
 
 .theorem-like-title {
@@ -246,8 +388,15 @@ body h1, body h2, body h3, body h4 {
 /* Env name shown as a bold sans-serif label on the first line
    (Theorem, Definition, Example, …). Colored to match the family
    palette by the group blocks below. Proof intentionally omits a
-   label — its "Proof." prelude and ∎ terminal handle the framing. */
-.theorem-like::before {
+   label — its "Proof." prelude and ∎ terminal handle the framing.
+   Problem-family envs (problem/exercise/question/exploration) share
+   the same label styling; their content rules and color live with
+   the blue palette block below. */
+.theorem-like::before,
+.problem-environment.problem::before,
+.problem-environment.exercise::before,
+.problem-environment.question::before,
+.problem-environment.exploration::before {
   font-family: var(--ximera-font-sans);
   font-weight: 700;
   font-size: 0.95em;
@@ -283,6 +432,11 @@ body h1, body h2, body h3, body h4 {
 
 .theorem-like.warning::before      { content: "Warning."; }
 .theorem-like.paradox::before      { content: "Paradox."; }
+
+.problem-environment.problem::before      { content: "Problem."; }
+.problem-environment.exercise::before     { content: "Exercise."; }
+.problem-environment.question::before     { content: "Question."; }
+.problem-environment.exploration::before  { content: "Exploration."; }
 
 /* Green — theorem-family and constructive/definitional.
    Matches the "grass" palette in original-stylesheets/theorems.scss. */
@@ -354,7 +508,11 @@ body h1, body h2, body h3, body h4 {
 .theorem-like.formula::before,
 .theorem-like.model::before,
 .theorem-like.procedure::before,
-.theorem-like.template::before {
+.theorem-like.template::before,
+.problem-environment.problem::before,
+.problem-environment.exercise::before,
+.problem-environment.question::before,
+.problem-environment.exploration::before {
   color: var(--ximera-color-env-problem);
 }
 

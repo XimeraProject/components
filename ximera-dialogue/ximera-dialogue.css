@@ -10,7 +10,7 @@
    grid collapses and dt/dd stack naturally (browser default). */
 
 .dialogue {
-  margin: 18pt 0;
+  margin: 1.5em 0;
 }
 
 .dialogue .actor {

@@ -28,5 +28,7 @@
 %<*htXourse>
 % Mark this as a xourse file
 \Configure{@HEAD}{\HCode{<meta name="description" content="xourse" />\Hnewline}}
+% Emit the xourse title as metadata (independent of \maketitle)
+\Configure{@HEAD}{\HCode{<meta name="title" content="}\@title\HCode{" />\Hnewline}}
 %</htXourse>
 %    \end{macrocode}

@@ -13,6 +13,7 @@ import { bundle } from './bundle.js';
 import { compile } from './compile.js';
 import { parseFlsFile, partitionOutputs, copyArtifacts, deleteTemps } from './artifacts.js';
 import { postprocess } from './postprocess.js';
+import { materialize } from './xourse.js';
 import { watch } from './watch.js';
 
 function toOutPath(texPath, root, outDir) {
@@ -103,6 +104,8 @@ async function runBuild(config) {
   console.log(`Compiling ${toCompile.length} file(s)...`);
   const errors = await compileBatch(toCompile, config, packages);
   if (errors.length > 0) process.exit(1);
+
+  await materialize(config.root, config.outDir);
 }
 
 export const program = new Command();

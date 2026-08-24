@@ -14,8 +14,13 @@ export async function postprocess(htmlPath, flsInputs, projectRoot, outDir, {
   xmcssPath,
   packages = [],
 } = {}) {
-  const $ = load(await readFile(htmlPath, 'utf8'));
+  // tex4ht outputs CSS counter declarations (env/counter names) before the
+  // <?xml ...?> preamble as part of its t4ht pipeline; strip them so cheerio
+  // doesn't drag them into <body> as visible text.
+  const raw = (await readFile(htmlPath, 'utf8')).replace(/^[^<]+/, '');
+  const $ = load(raw);
 
+  ensureCharset($);
   removeEmptyParas($);
   await injectDependencyMeta($, flsInputs, projectRoot);
   if (xmjaxPath) await injectXmjax($, xmjaxPath);
@@ -36,12 +41,16 @@ export async function postprocess(htmlPath, flsInputs, projectRoot, outDir, {
 
   injectBundleRefs($, htmlPath, outDir);
 
-  if (isXourse($)) {
-    removeSpuriousAnchors($);
-    await enrichActivityLinks($, htmlPath, projectRoot, outDir);
-  }
-
   await writeFile(htmlPath, $.html());
+}
+
+// Guarantee <meta charset="utf-8"> is the first child of <head>.
+// tex4ht emits its own charset declaration inline in the body stream, which
+// means cheerio ends up with an empty or late-declared charset — browsers
+// default to Latin-1 and mojibake curly quotes / em-dashes.
+export function ensureCharset($) {
+  $('meta[http-equiv="Content-Type"]').remove();
+  if (!$('meta[charset]').length) $('head').prepend('<meta charset="utf-8">');
 }
 
 // Remove <p></p> elements (empty inner HTML after trimming).
@@ -64,21 +73,6 @@ export async function injectDependencyMeta($, flsInputs, projectRoot) {
     const relPath = path.relative(projectRoot, absPath);
     $('head').append(`<meta name="dependency" content="${hash} ${relPath}">`);
   }
-}
-
-// Detect xourse files by the meta tag ximera.cls injects via htlatex.
-export function isXourse($) {
-  return $('meta[name="description"][content="xourse"]').length > 0;
-}
-
-// htlatex inserts bare <a id="..."> anchors with no href or class.
-// Unwrap them in place, preserving any child content.
-export function removeSpuriousAnchors($) {
-  $('a[id]').each((_, el) => {
-    if (!$(el).attr('href') && !$(el).attr('class')) {
-      $(el).replaceWith($(el).contents());
-    }
-  });
 }
 
 // Read the .xmjax file produced by ximera.cls and inject filtered \newcommand
@@ -146,40 +140,3 @@ export function injectBundleRefs($, htmlPath, outDir) {
   $('body').append(`<script defer src="${jsRel}"></script>`);
 }
 
-// For each <a class="activity" href="something.tex"> in a xourse file:
-//   - resolve the href relative to the mirrored source path
-//   - normalize it to projectRoot-relative without .tex extension
-//   - read the compiled activity HTML and inject <h2>title</h2><h3>abstract</h3>
-export async function enrichActivityLinks($, htmlPath, projectRoot, outDir) {
-  // Map htmlPath back to its source directory through the mirrored hierarchy.
-  const srcDir = path.dirname(
-    path.join(projectRoot, path.relative(outDir, htmlPath))
-  );
-
-  for (const el of $('a.activity[href]').toArray()) {
-    const href = $(el).attr('href');
-    if (!href.endsWith('.tex')) continue;
-
-    const absSrc = path.resolve(srcDir, href);
-    const relSrc = path.relative(projectRoot, absSrc);
-
-    // Normalize href: relative to projectRoot, no .tex extension
-    $(el).attr('href', relSrc.replace(/\.tex$/, ''));
-
-    // Read the compiled activity HTML to extract title and abstract
-    const activityHtmlPath = path.join(outDir, relSrc.replace(/\.tex$/, '.html'));
-    let activityHtml;
-    try {
-      activityHtml = await readFile(activityHtmlPath, 'utf8');
-    } catch {
-      continue; // activity not yet compiled, skip enrichment
-    }
-
-    const $a = load(activityHtml);
-    const title = $a('title').text().trim();
-    const abstract = $a('div.abstract').html()?.trim() ?? '';
-
-    if (title) $(el).append(`<h2>${title}</h2>`);
-    if (abstract) $(el).append(`<h3>${abstract}</h3>`);
-  }
-}

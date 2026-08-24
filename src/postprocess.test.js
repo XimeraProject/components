@@ -1,15 +1,36 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, readFile, rm } from 'fs/promises';
+import { mkdtemp, writeFile, readFile, rm } from 'fs/promises';
 import { load } from 'cheerio';
 import os from 'os';
 import path from 'path';
 import {
-  removeEmptyParas, injectDependencyMeta, isXourse,
-  removeSpuriousAnchors, enrichActivityLinks, postprocess,
+  ensureCharset, removeEmptyParas, injectDependencyMeta, postprocess,
   injectXmjax, injectXmcss, filterXmjaxCommands,
   stripOldXimeraScripts,
 } from './postprocess.js';
+
+describe('ensureCharset', () => {
+  it('prepends <meta charset="utf-8"> as first child of <head>', () => {
+    const $ = load('<html><head><title>T</title></head><body></body></html>');
+    ensureCharset($);
+    assert.equal($('head').children().first().attr('charset'), 'utf-8');
+  });
+
+  it('removes any pre-existing http-equiv Content-Type meta', () => {
+    const $ = load('<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"></head><body></body></html>');
+    ensureCharset($);
+    assert.equal($('meta[http-equiv="Content-Type"]').length, 0);
+    assert.equal($('meta[charset]').length, 1);
+  });
+
+  it('is idempotent when called twice', () => {
+    const $ = load('<html><head></head><body></body></html>');
+    ensureCharset($);
+    ensureCharset($);
+    assert.equal($('meta[charset]').length, 1);
+  });
+});
 
 describe('removeEmptyParas', () => {
   it('removes a truly empty <p></p>', () => {
@@ -35,44 +56,6 @@ describe('removeEmptyParas', () => {
     const $ = load('<p>hello world</p>');
     removeEmptyParas($);
     assert.equal($('p').length, 1);
-  });
-});
-
-describe('isXourse', () => {
-  it('returns true when the xourse meta tag is present', () => {
-    const $ = load('<meta name="description" content="xourse">');
-    assert.equal(isXourse($), true);
-  });
-
-  it('returns false when the meta tag is absent', () => {
-    const $ = load('<html><head></head></html>');
-    assert.equal(isXourse($), false);
-  });
-
-  it('returns false for a different description content', () => {
-    const $ = load('<meta name="description" content="other">');
-    assert.equal(isXourse($), false);
-  });
-});
-
-describe('removeSpuriousAnchors', () => {
-  it('unwraps bare <a id="..."> with no href or class', () => {
-    const $ = load('<p><a id="sec1">text</a></p>');
-    removeSpuriousAnchors($);
-    assert.equal($('a[id]').length, 0);
-    assert.equal($('p').text(), 'text');
-  });
-
-  it('preserves anchors that have an href', () => {
-    const $ = load('<a id="x" href="#x">link</a>');
-    removeSpuriousAnchors($);
-    assert.equal($('a[id]').length, 1);
-  });
-
-  it('preserves anchors that have a class', () => {
-    const $ = load('<a id="x" class="activity">text</a>');
-    removeSpuriousAnchors($);
-    assert.equal($('a[id]').length, 1);
   });
 });
 
@@ -107,50 +90,6 @@ describe('injectDependencyMeta', () => {
     const $ = load('<html><head></head></html>');
     await injectDependencyMeta($, [path.join(dir, 'ghost.tex')], dir);
     assert.equal($('meta[name="dependency"]').length, 0);
-  });
-});
-
-describe('enrichActivityLinks', () => {
-  let root, outDir;
-  before(async () => {
-    root = await mkdtemp(path.join(os.tmpdir(), 'tex4npm-xourse-'));
-    outDir = path.join(root, 'dist');
-    await mkdir(outDir, { recursive: true });
-
-    // Compiled activity HTML in outDir
-    await writeFile(path.join(outDir, 'section.html'), `
-      <html><head><title>My Section</title></head>
-      <body><div class="abstract"><p>A great section.</p></div></body></html>
-    `);
-  });
-  after(() => rm(root, { recursive: true, force: true }));
-
-  it('normalizes href and injects title and abstract', async () => {
-    // Simulate a xourse HTML at outDir/main.html (source: root/main.tex)
-    const $ = load(`<html><head></head><body>
-      <a class="activity" href="section.tex">Activity</a>
-    </body></html>`);
-
-    await enrichActivityLinks($, path.join(outDir, 'main.html'), root, outDir);
-
-    const link = $('a.activity');
-    assert.equal(link.attr('href'), 'section');
-    assert.equal(link.find('h2').text(), 'My Section');
-    assert.ok(link.find('h3').text().includes('great section'));
-  });
-
-  it('skips links whose compiled HTML does not exist yet', async () => {
-    const $ = load(`<a class="activity" href="missing.tex">x</a>`);
-    await assert.doesNotReject(() =>
-      enrichActivityLinks($, path.join(outDir, 'main.html'), root, outDir)
-    );
-    assert.equal($('a.activity').find('h2').length, 0);
-  });
-
-  it('skips links that do not end in .tex', async () => {
-    const $ = load(`<a class="activity" href="https://example.com">x</a>`);
-    await enrichActivityLinks($, path.join(outDir, 'main.html'), root, outDir);
-    assert.equal($('a.activity').find('h2').length, 0);
   });
 });
 
@@ -298,6 +237,21 @@ describe('postprocess (integration)', () => {
     dir = await mkdtemp(path.join(os.tmpdir(), 'tex4npm-pp-'));
   });
   after(() => rm(dir, { recursive: true, force: true }));
+
+  it('strips tex4ht CSS counter declarations that appear before <html>', async () => {
+    const htmlPath = path.join(dir, 'counter-garbage.html');
+    await writeFile(htmlPath,
+      'freeResponse\nmultipleChoice\n' +
+      '<html><head></head><body><p>content</p></body></html>'
+    );
+
+    await postprocess(htmlPath, [], dir, dir);
+
+    const result = await readFile(htmlPath, 'utf8');
+    assert.ok(!result.includes('freeResponse'), 'counter name should be stripped');
+    assert.ok(!result.includes('multipleChoice'), 'counter name should be stripped');
+    assert.ok(result.includes('content'), 'real content should survive');
+  });
 
   it('writes modified HTML back to the file', async () => {
     const htmlPath = path.join(dir, 'out.html');

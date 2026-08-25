@@ -9,6 +9,7 @@
     "tex4npm": "*",
     "ximera-answer": "*",
     "ximera-choice": "*",
+    "ximera-chrome": "*",
     "ximera-core": "*",
     "ximera-dialogue": "*",
     "ximera-foldable": "*",

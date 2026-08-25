@@ -1,0 +1,547 @@
+/* ximera-chrome — page shell (sticky navbar, sidebar TOC, footer) plus xourse
+   chrome (breadcrumb, prev/next pager). Consumes design tokens from
+   ximera-core (--ximera-color-*, --ximera-radius, etc.) but layers its own
+   palette on top: cool paper, graphite ink, prussian-indigo accent, with
+   three-face type (IBM Plex Sans + Mono + inherited Latin Modern serif for
+   body content). */
+
+/* ---------- Design tokens ------------------------------------------------ */
+
+:root {
+  --chrome-paper:     #f7f7f4;
+  --chrome-paper-2:   #ffffff;
+  --chrome-ink:       #1a1b1e;
+  --chrome-ink-soft:  #3a3b3f;
+  --chrome-muted:     #6b6a66;
+  --chrome-rule:      #d8d6ce;
+  --chrome-rule-soft: #e6e4dc;
+  --chrome-accent:    #2b3e7a;
+  --chrome-accent-2:  #435aa3;
+  --chrome-tint:      #e8ecf5;
+
+  --chrome-font-sans: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+  --chrome-font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --chrome-shadow-nav:   0 1px 0 var(--chrome-rule);
+  --chrome-shadow-hover: 0 1px 3px rgba(26, 27, 30, 0.06);
+
+  --chrome-nav-height: 3.4rem;
+  --chrome-content-measure: 34em;
+  --chrome-toc-width: 15rem;
+  --chrome-side-gutter: 2rem;
+}
+
+/* ---------- Page frame --------------------------------------------------- */
+
+/* ximera-core sets a reading-measure body (max-width + margin: 0 auto + padding).
+   With chrome present, the body has to become a viewport-width flex column so
+   the navbar and footer can span edge-to-edge; the reading measure moves down
+   into .ximera-content. Overrides use `!important` because ximera-core.css and
+   ximera-chrome.css are peers in the bundle order; without it, an override
+   this fundamental is too fragile. */
+
+html { background: var(--chrome-paper); }
+
+body {
+  margin: 0 !important;
+  padding: 0 !important;
+  max-width: none !important;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: var(--chrome-ink);
+  background: var(--chrome-paper);
+  /* Body text (math content) still inherits serif via ximera-core's own
+     `body { font-family: var(--ximera-font-serif) }` rule. */
+}
+
+/* ---------- Sticky navbar ------------------------------------------------ */
+
+.ximera-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: color-mix(in oklab, var(--chrome-paper) 82%, transparent);
+  backdrop-filter: saturate(140%) blur(10px);
+  -webkit-backdrop-filter: saturate(140%) blur(10px);
+  border-bottom: 1px solid var(--chrome-rule);
+}
+
+.ximera-nav {
+  max-width: 84rem;
+  margin: 0 auto;
+  height: var(--chrome-nav-height);
+  padding: 0 var(--chrome-side-gutter);
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  font-family: var(--chrome-font-sans);
+}
+
+.ximera-brand {
+  display: inline-flex;
+  align-items: center;
+  color: var(--chrome-ink);
+  flex-shrink: 0;
+}
+
+.ximera-logo { display: inline-flex; color: currentColor; }
+
+.ximera-logo svg {
+  display: block;
+  height: 1.35rem;
+  width: auto;
+}
+
+/* Wordmark already reads "XIMERA"; keep the label in the DOM (screen readers
+   pick it up via role="img" aria-label on .ximera-brand) but hide it. */
+.ximera-project-name {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.ximera-course-title {
+  font-family: var(--chrome-font-sans);
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--chrome-ink);
+  letter-spacing: -0.005em;
+  padding-left: 1.25rem;
+  border-left: 1px solid var(--chrome-rule);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ximera-course-title[data-empty] { display: none; }
+
+.ximera-nav-controls {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.ximera-slot:empty { display: none; }
+.ximera-page-controls:empty { display: none; }
+
+/* ---------- Progress bar in navbar --------------------------------------- */
+
+.ximera-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.ximera-progress-label {
+  font-family: var(--chrome-font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--chrome-muted);
+}
+
+.ximera-progress-track {
+  display: inline-block;
+  width: 6rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: var(--chrome-rule-soft);
+  overflow: hidden;
+  position: relative;
+}
+
+.ximera-progress-fill {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--chrome-accent), var(--chrome-accent-2));
+  border-radius: inherit;
+  transition: width 0.4s ease;
+}
+
+.ximera-progress-value {
+  font-family: var(--chrome-font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  color: var(--chrome-ink-soft);
+  min-width: 2.5em;
+  text-align: right;
+}
+
+/* ---------- Reset button (auto-mounted by ximera-core) ------------------- */
+
+.ximera-page-controls .ximera-reset-btn,
+.ximera-nav .ximera-reset-btn {
+  font-family: var(--chrome-font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--chrome-ink-soft);
+  background: transparent;
+  border: 1px solid var(--chrome-rule);
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  line-height: 1;
+}
+
+.ximera-page-controls .ximera-reset-btn:hover,
+.ximera-nav .ximera-reset-btn:hover {
+  color: var(--chrome-accent);
+  border-color: var(--chrome-accent);
+  background: var(--chrome-tint);
+}
+
+.ximera-page-controls .ximera-reset-btn:focus-visible,
+.ximera-nav .ximera-reset-btn:focus-visible {
+  outline: 2px solid var(--chrome-accent);
+  outline-offset: 2px;
+}
+
+/* ---------- Main content region ------------------------------------------ */
+
+.ximera-content {
+  flex: 1 1 auto;
+  width: 100%;
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 2rem var(--chrome-side-gutter) 3.5rem;
+  box-sizing: border-box;
+}
+
+/* On canonical (non-xourse) pages, constrain the reading measure so long
+   text lines don't sprawl across a wide content band. */
+.ximera-content:not([data-xourse-layout]) > * {
+  max-width: var(--chrome-content-measure);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ---------- Xourse-scoped layout (TOC + body) ---------------------------- */
+
+/* Two-column grid: sidebar TOC (fixed) + reading column (measure-capped).
+   The whole cluster centers inside the viewport — extra viewport width
+   becomes symmetric margins on both sides, not a single gutter on the right. */
+.ximera-content[data-xourse-layout] {
+  max-width: 56rem;
+  display: grid;
+  grid-template-columns: var(--chrome-toc-width) minmax(0, var(--chrome-content-measure));
+  grid-template-areas: "toc body";
+  column-gap: 3rem;
+}
+
+.xourse-toc  { grid-area: toc; }
+.xourse-body { grid-area: body; min-width: 0; }
+
+/* ---------- TOC ---------------------------------------------------------- */
+
+.xourse-toc {
+  position: sticky;
+  top: calc(var(--chrome-nav-height) + 1.5rem);
+  align-self: start;
+  max-height: calc(100vh - var(--chrome-nav-height) - 3rem);
+  overflow-y: auto;
+  padding-right: 0.5rem;
+  font-family: var(--chrome-font-sans);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.xourse-toc-part {
+  margin: 1.1rem 0 0.4rem;
+  padding: 0 0 0.25rem;
+  font-family: var(--chrome-font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--chrome-muted);
+  border-bottom: 1px solid var(--chrome-rule-soft);
+}
+
+.xourse-toc-part:first-child { margin-top: 0; }
+
+.xourse-toc-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.75rem;
+  counter-reset: xourse-toc;
+}
+
+.xourse-toc-list li {
+  counter-increment: xourse-toc;
+  padding: 0.25rem 0 0.25rem 1.6rem;
+  border-left: 2px solid transparent;
+  position: relative;
+  color: var(--chrome-ink-soft);
+}
+
+.xourse-toc-list li::before {
+  content: counter(xourse-toc, decimal-leading-zero);
+  position: absolute;
+  left: 0.5rem;
+  top: 0.25rem;
+  font-family: var(--chrome-font-mono);
+  font-size: 0.7rem;
+  color: var(--chrome-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.xourse-toc-list li a,
+.xourse-toc-list li span {
+  color: inherit;
+  text-decoration: none;
+  display: block;
+}
+
+.xourse-toc-list li a:hover {
+  color: var(--chrome-accent);
+}
+
+.xourse-toc-list li[data-state="current"] {
+  border-left-color: var(--chrome-accent);
+  color: var(--chrome-ink);
+  font-weight: 600;
+}
+
+.xourse-toc-list li[data-state="current"]::before {
+  color: var(--chrome-accent);
+}
+
+/* ---------- Breadcrumb --------------------------------------------------- */
+
+.xourse-breadcrumb {
+  font-family: var(--chrome-font-sans);
+  font-size: 0.8rem;
+  color: var(--chrome-muted);
+  padding: 0 0 0.75rem;
+  margin: 0 0 1.5rem;
+  border-bottom: 1px solid var(--chrome-rule-soft);
+}
+
+.xourse-breadcrumb a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.xourse-breadcrumb a:hover {
+  color: var(--chrome-accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+.xourse-crumb-current { color: var(--chrome-ink); font-weight: 600; }
+.xourse-crumb-sep     { color: var(--chrome-rule); margin: 0 0.15em; }
+
+/* ---------- Pager -------------------------------------------------------- */
+
+.xourse-pager {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--chrome-rule);
+  font-family: var(--chrome-font-sans);
+}
+
+.xourse-prev,
+.xourse-next {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--chrome-rule);
+  border-radius: 6px;
+  color: var(--chrome-ink-soft);
+  text-decoration: none;
+  background: var(--chrome-paper-2);
+  transition: border-color 0.15s, color 0.15s, box-shadow 0.15s;
+  min-width: 0;
+}
+
+.xourse-next { text-align: right; }
+
+.xourse-prev:hover,
+.xourse-next:hover {
+  border-color: var(--chrome-accent);
+  color: var(--chrome-ink);
+  box-shadow: var(--chrome-shadow-hover);
+}
+
+.xourse-pager-label {
+  font-family: var(--chrome-font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--chrome-muted);
+}
+
+.xourse-pager-title {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xourse-pager-empty {
+  visibility: hidden;
+}
+
+/* ---------- Landing-page activity cards ---------------------------------- */
+
+a.activity {
+  display: block;
+  padding: 1.1rem 1.25rem;
+  margin: 0.75rem 0;
+  border: 1px solid var(--chrome-rule);
+  border-radius: 6px;
+  color: inherit;
+  text-decoration: none;
+  background: var(--chrome-paper-2);
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  position: relative;
+}
+
+a.activity::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 20%;
+  bottom: 20%;
+  width: 2px;
+  background: var(--chrome-accent);
+  opacity: 0;
+  transition: opacity 0.15s;
+  border-radius: 999px;
+}
+
+a.activity:hover {
+  border-color: var(--chrome-accent);
+  box-shadow: var(--chrome-shadow-hover);
+}
+
+a.activity:hover::before { opacity: 1; }
+
+a.activity h2 {
+  font-family: var(--chrome-font-sans);
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--chrome-ink);
+}
+
+a.activity h3 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--chrome-muted);
+  font-family: var(--chrome-font-sans);
+}
+
+/* ---------- Footer with ghosted wordmark --------------------------------- */
+
+.ximera-footer {
+  position: relative;
+  overflow: hidden;
+  margin-top: auto;
+  padding: 3rem var(--chrome-side-gutter) 2rem;
+  background: var(--chrome-paper);
+  border-top: 1px solid var(--chrome-rule);
+  isolation: isolate;
+  font-family: var(--chrome-font-sans);
+  font-size: 0.85rem;
+  color: var(--chrome-muted);
+}
+
+/* The ghosted wordmark — the signature aesthetic hook. Oversized, low-opacity,
+   bleeding off both edges, sitting behind the footer link row like the ghost
+   impression of a letterpress plate. */
+.ximera-footer-mark {
+  position: absolute;
+  left: 50%;
+  bottom: -1.5rem;
+  transform: translateX(-50%);
+  width: 130%;
+  min-width: 60rem;
+  color: var(--chrome-ink);
+  opacity: 0.04;
+  z-index: -1;
+  pointer-events: none;
+  line-height: 0;
+}
+
+.ximera-footer-mark svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.ximera-footer-inner {
+  max-width: 84rem;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.ximera-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
+.ximera-footer a {
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.ximera-footer a:hover {
+  color: var(--chrome-ink);
+  border-bottom-color: var(--chrome-rule);
+}
+
+/* ---------- Responsive collapse ------------------------------------------ */
+
+@media (max-width: 900px) {
+  .ximera-content[data-xourse-layout] {
+    grid-template-columns: 1fr;
+    grid-template-areas: "body";
+  }
+  .xourse-toc {
+    display: none;   /* phase 2: mobile drawer replacement */
+  }
+}
+
+@media (max-width: 640px) {
+  :root { --chrome-side-gutter: 1rem; }
+  .ximera-nav { gap: 0.75rem; }
+  .ximera-course-title {
+    padding-left: 0.75rem;
+    font-size: 0.85rem;
+  }
+  .ximera-progress-label,
+  .ximera-progress-value { display: none; }
+  .ximera-progress-track { width: 4rem; }
+  .xourse-pager { grid-template-columns: 1fr; }
+  .ximera-footer-mark { min-width: 40rem; }
+}

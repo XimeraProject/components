@@ -1,0 +1,17 @@
+{
+  "name": "ximera-chrome",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "index.js",
+  "latex": {
+    "css": ["ximera-chrome.css"],
+    "postprocess": "postprocess.js",
+    "xourse": "xourse.js"
+  },
+  "scripts": {
+    "test": "node --test 'test/**/*.test.js'"
+  },
+  "devDependencies": {
+    "cheerio": "^1.0.0"
+  }
+}

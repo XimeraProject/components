@@ -1,5 +1,6 @@
 import { readFile, writeFile, mkdir, readdir } from 'fs/promises';
 import { load } from 'cheerio';
+import { pathToFileURL } from 'url';
 import path from 'path';
 
 // Detect xourse files by the meta tag ximera.cls injects via htlatex.
@@ -91,8 +92,10 @@ export async function writeManifest(manifest, outDir) {
 
 // Mutate the loaded xourse HTML (cheerio $) into the landing page:
 // - populate <title> from manifest.title
-// - inject <h2>title</h2><h3>abstract</h3> inside each activity anchor
 // - rewrite each activity anchor's href to point at the xourse-scoped copy
+//
+// Visible chrome (activity-card h2/h3 enrichment, layout) belongs to a chrome
+// package that provides a `latex.xourse` hook — see materialize() below.
 export function renderLandingPage($, manifest) {
   removeSpuriousAnchors($);
 
@@ -101,44 +104,32 @@ export function renderLandingPage($, manifest) {
     $('title').text(manifest.title);
   }
 
-  // Build a map path -> activity meta for quick lookup during anchor rewrite.
-  const byPath = new Map();
+  // Rewrite each activity anchor's href to `{xourse}/{path}.html`. The
+  // href here is source-relative (with or without .tex); normalize by
+  // dropping .tex and looking it up in the manifest.
+  const known = new Set();
   for (const part of manifest.parts) {
-    for (const a of part.activities) byPath.set(a.path, a);
+    for (const a of part.activities) known.add(a.path);
   }
-
   $('a.activity[href]').each((_, el) => {
     const $el = $(el);
     const rawHref = $el.attr('href');
     if (!rawHref) return;
-    // The href here is source-relative (with or without .tex); normalize by
-    // dropping .tex and treating as manifest key. The manifest already used
-    // srcDir-relative paths, so this matches.
     const key = rawHref.replace(/\.tex$/, '');
-    const a = byPath.get(key);
-    if (!a) return;
-
-    // Inject title / abstract inside the anchor.
-    if (a.title && $el.find('h2').length === 0) $el.append(`<h2>${a.title}</h2>`);
-    if (a.abstract && $el.find('h3').length === 0) $el.append(`<h3>${a.abstract}</h3>`);
-
-    // Rewrite href to the xourse-scoped copy: `{xourse}/{path}.html`.
-    $el.attr('href', `${manifest.xourse}/${a.path}.html`);
+    if (!known.has(key)) return;
+    $el.attr('href', `${manifest.xourse}/${key}.html`);
   });
 }
 
 // Emit one xourse-scoped copy per activity in the manifest.
 // For each activity at outDir/{path}.html, write outDir/{xourse}/{path}.html
-// with nav injected and asset paths rewritten for the extra directory depth.
-export async function emitScopedCopies(manifest, outDir) {
+// with dep meta stripped, canonical link added, and relative asset paths
+// rewritten for the extra directory depth. Visible chrome (breadcrumb, TOC,
+// pager) is layered by chrome-package hooks; this function only does the
+// mechanical work and invokes the hooks.
+export async function emitScopedCopies(manifest, outDir, scopedHooks = []) {
   const xourseStem = manifest.xourse;
   const flat = manifest.flatOrder;
-
-  // Build metadata lookup for nav labels.
-  const meta = new Map();
-  for (const part of manifest.parts) {
-    for (const a of part.activities) meta.set(a.path, a);
-  }
 
   for (let i = 0; i < flat.length; i++) {
     const activityPath = flat[i];
@@ -157,52 +148,30 @@ export async function emitScopedCopies(manifest, outDir) {
     // Strip build-time dependency metadata from scoped copy.
     $('meta[name="dependency"]').remove();
 
-    // Depth of the scoped copy relative to outDir: xourse + activityPath dirname.
-    // Path up to outDir: number of separators in `${xourseStem}/${activityPath}` minus filename.
-    const scopedRel = path.join(xourseStem, `${activityPath}.html`);
-    const scopedDir = path.dirname(scopedRel);
+    // Depth of the scoped copy relative to outDir. The scoped copy lives at
+    // outDir/{xourse}/{activityPath}.html, so depth is 1 for a flat path
+    // like "demo" and 1 + (nesting of activityPath) for nested paths.
+    const scopedDir = path.dirname(path.join(xourseStem, `${activityPath}.html`));
     const upToOut = path.relative(path.join(outDir, scopedDir), outDir) || '.';
+    const depth = upToOut === '.' ? 0 : upToOut.split(path.sep).length;
 
     // Canonical link to the xourse-free copy.
     $('head').append(
       `<link rel="canonical" href="${path.posix.join(upToOut.split(path.sep).join('/'), `${activityPath}.html`)}">`
     );
 
-    // Nav: breadcrumb + prev/next.
+    // Dispatch chrome-package hooks. Each hook receives the same ctx.
     const prev = i > 0 ? flat[i - 1] : null;
     const next = i + 1 < flat.length ? flat[i + 1] : null;
-    const nav = [];
-    const upSlash = upToOut.split(path.sep).join('/');
-    nav.push(`<a href="${path.posix.join(upSlash, `${xourseStem}.html`)}" class="xourse-crumb">${escapeHtml(manifest.title ?? xourseStem)}</a>`);
-    if (prev) {
-      const prevMeta = meta.get(prev) ?? {};
-      const prevHref = relPath(activityPath, prev);
-      nav.push(`<a href="${prevHref}" class="xourse-prev">← ${escapeHtml(prevMeta.title ?? prev)}</a>`);
-    }
-    if (next) {
-      const nextMeta = meta.get(next) ?? {};
-      const nextHref = relPath(activityPath, next);
-      nav.push(`<a href="${nextHref}" class="xourse-next">${escapeHtml(nextMeta.title ?? next)} →</a>`);
-    }
-    $('body').prepend(`<nav class="xourse-nav">\n  ${nav.join('\n  ')}\n</nav>`);
-
-    // Write to outDir/{xourse}/{activityPath}.html
     const target = path.join(outDir, xourseStem, `${activityPath}.html`);
+    const ctx = { manifest, activityPath, prev, next, depth, outDir, htmlPath: target };
+    for (const hook of scopedHooks) {
+      await hook($, ctx);
+    }
+
     await mkdir(path.dirname(target), { recursive: true });
     await writeFile(target, $.html());
   }
-}
-
-// Compute a same-xourse relative link from one activity path to another.
-// Both are outDir-relative (no leading slash, no .html). The scoped copies
-// live at outDir/{xourse}/{path}.html, so we compute the path from the
-// current activity's directory to the target activity's file.
-function relPath(fromActivity, toActivity) {
-  const fromDir = path.dirname(fromActivity);
-  const toFile = `${toActivity}.html`;
-  const rel = path.relative(fromDir, toFile);
-  // Ensure POSIX separators for URLs.
-  return rel.split(path.sep).join('/') || `./${path.basename(toFile)}`;
 }
 
 // Rewrite href/src attributes that are relative (not absolute URLs or
@@ -233,12 +202,28 @@ export function rewriteRelativePaths($) {
   $('a[href]').each((_, el) => rewrite(el, 'href'));
 }
 
-function escapeHtml(s) {
-  return String(s)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;');
+// Load each package.latex.xourse module and split its default export into
+// injectLanding/injectScoped hook arrays. A hook module's default export is
+// either an object with { injectLanding?, injectScoped? } (per D5 for
+// xourse-aware chrome) or a single async function that acts on any page.
+async function loadXourseHooks(packages) {
+  const landing = [];
+  const scoped = [];
+  for (const pkg of packages) {
+    for (const rel of pkg.xourse ?? []) {
+      const mod = await import(pathToFileURL(path.join(pkg.dir, rel)).href);
+      const def = mod.default;
+      if (!def) continue;
+      if (typeof def === 'function') {
+        landing.push(def);
+        scoped.push(def);
+      } else {
+        if (typeof def.injectLanding === 'function') landing.push(def.injectLanding);
+        if (typeof def.injectScoped === 'function') scoped.push(def.injectScoped);
+      }
+    }
+  }
+  return { landing, scoped };
 }
 
 // Top-level orchestration: scan outDir for compiled xourse HTMLs, and for
@@ -247,7 +232,10 @@ function escapeHtml(s) {
 //
 // projectRoot: the project's config.root (source directory).
 // outDir: the project's config.outDir.
-export async function materialize(projectRoot, outDir) {
+// packages: latex packages discovered by stage(); their `.xourse` field
+//   lists chrome hooks to invoke on landing pages and scoped copies.
+export async function materialize(projectRoot, outDir, packages = []) {
+  const { landing: landingHooks, scoped: scopedHooks } = await loadXourseHooks(packages);
   const xourses = await findXourseHtmls(outDir);
   for (const htmlPath of xourses) {
     const raw = await readFile(htmlPath, 'utf8');
@@ -262,8 +250,16 @@ export async function materialize(projectRoot, outDir) {
     const manifest = await parseManifest($, xourseStem, srcDir, outDir);
     await writeManifest(manifest, outDir);
     renderLandingPage($, manifest);
+
+    // Dispatch chrome-package landing hooks. Landing pages sit at outDir
+    // root, so depth = 0.
+    const landingCtx = { manifest, outDir, htmlPath, depth: 0 };
+    for (const hook of landingHooks) {
+      await hook($, landingCtx);
+    }
+
     await writeFile(htmlPath, $.html());
-    await emitScopedCopies(manifest, outDir);
+    await emitScopedCopies(manifest, outDir, scopedHooks);
     console.log(`  ✓ materialized xourse ${xourseStem} (${manifest.flatOrder.length} activities)`);
   }
 }

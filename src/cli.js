@@ -105,7 +105,7 @@ async function runBuild(config) {
   const errors = await compileBatch(toCompile, config, packages);
   if (errors.length > 0) process.exit(1);
 
-  await materialize(config.root, config.outDir);
+  await materialize(config.root, config.outDir, packages);
 }
 
 export const program = new Command();

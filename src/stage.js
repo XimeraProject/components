@@ -27,10 +27,14 @@ export async function findLatexPackages(root) {
       continue;
     }
     if (!pkg.latex) continue;
-    // "postprocess" may be a single relative path or an array; normalize to array.
-    // Modules are loaded and executed by postprocess.js (Phase 4, D5).
+    // "postprocess" and "xourse" may each be a single relative path or an
+    // array; normalize to arrays. postprocess hooks are loaded and run by
+    // postprocess.js (Phase 4, D5); xourse hooks are loaded and run by
+    // xourse.js during materialize.
     const rawPost = pkg.latex.postprocess;
     const postprocess = Array.isArray(rawPost) ? rawPost : (rawPost ? [rawPost] : []);
+    const rawXourse = pkg.latex.xourse;
+    const xourse = Array.isArray(rawXourse) ? rawXourse : (rawXourse ? [rawXourse] : []);
     packages.push({
       name: pkg.name,
       dir: path.dirname(manifestPath),
@@ -41,6 +45,7 @@ export async function findLatexPackages(root) {
       css: pkg.latex.css ?? [],
       hasJs: Boolean(pkg.main ?? pkg.exports ?? pkg.module),
       postprocess,
+      xourse,
     });
   }
 

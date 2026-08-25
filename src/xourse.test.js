@@ -130,9 +130,13 @@ describe('writeManifest', () => {
 });
 
 // ---------- renderLandingPage ----------
+//
+// tex4npm's renderLandingPage now only does mechanical work: title + href
+// rewrite. Visual enrichment (h2/h3 inside activity cards) is the chrome
+// package's responsibility via a `latex.xourse` hook.
 
 describe('renderLandingPage', () => {
-  it('sets <title>, injects h2/h3, rewrites hrefs to xourse/path.html', () => {
+  it('sets <title> and rewrites hrefs to xourse/path.html', () => {
     const $ = load(`<html><head><title></title></head><body>
       <a class="activity" href="demo">demo</a>
       <a class="activity" href="sample">sample</a>
@@ -152,12 +156,20 @@ describe('renderLandingPage', () => {
     };
     renderLandingPage($, manifest);
     assert.equal($('title').text(), 'My Course');
-    const demoLink = $('a.activity[href="all/demo.html"]');
-    assert.equal(demoLink.length, 1);
-    assert.equal(demoLink.find('h2').text(), 'Demo');
-    assert.equal(demoLink.find('h3').text(), 'Abs D');
-    const sampleLink = $('a.activity[href="all/sample.html"]');
-    assert.equal(sampleLink.length, 1);
+    assert.equal($('a.activity[href="all/demo.html"]').length, 1);
+    assert.equal($('a.activity[href="all/sample.html"]').length, 1);
+  });
+
+  it('does not inject h2/h3 (that is a chrome-package responsibility)', () => {
+    const $ = load('<a class="activity" href="demo">demo</a>');
+    const manifest = {
+      xourse: 'all', title: 'T', abstract: null,
+      parts: [{ title: null, activities: [{ path: 'demo', title: 'D', abstract: 'A' }] }],
+      flatOrder: ['demo'],
+    };
+    renderLandingPage($, manifest);
+    assert.equal($('a.activity h2').length, 0);
+    assert.equal($('a.activity h3').length, 0);
   });
 
   it('handles activity anchors whose href still carries .tex', () => {
@@ -209,12 +221,15 @@ describe('rewriteRelativePaths', () => {
 });
 
 // ---------- emitScopedCopies ----------
+//
+// Mechanical work only (canonical link, path rewriting, dep-meta strip).
+// Visible chrome (nav/breadcrumb/TOC/pager) is a chrome-package hook and
+// is verified via the scopedHooks-dispatch test below.
 
 describe('emitScopedCopies', () => {
   let outDir;
   before(async () => {
     outDir = await mkdtemp(path.join(os.tmpdir(), 'tex4npm-scoped-'));
-    // Canonical activities
     await writeFile(path.join(outDir, 'demo.html'),
       '<html><head><meta name="dependency" content="hash demo.tex">' +
       '<link rel="stylesheet" href="ximera.css"></head>' +
@@ -228,7 +243,7 @@ describe('emitScopedCopies', () => {
   });
   after(() => rm(outDir, { recursive: true, force: true }));
 
-  it('writes one file per activity under {xourse}/, with nav, canonical, rewritten paths', async () => {
+  it('writes one file per activity under {xourse}/, with canonical link and rewritten paths', async () => {
     const manifest = {
       xourse: 'all',
       title: 'My Course',
@@ -245,30 +260,43 @@ describe('emitScopedCopies', () => {
     };
     await emitScopedCopies(manifest, outDir);
 
-    // First (demo): no prev, has next=sample
     const demoRaw = await readFile(path.join(outDir, 'all', 'demo.html'), 'utf8');
     const $demo = load(demoRaw);
     assert.equal($demo('meta[name="dependency"]').length, 0, 'dep meta stripped');
     assert.equal($demo('link[rel="canonical"]').attr('href'), '../demo.html');
-    assert.equal($demo('nav.xourse-nav').length, 1);
-    assert.equal($demo('a.xourse-crumb').attr('href'), '../all.html');
-    assert.equal($demo('a.xourse-prev').length, 0, 'no prev on first');
-    assert.equal($demo('a.xourse-next').length, 1);
-    assert.equal($demo('a.xourse-next').attr('href'), 'sample.html');
     assert.equal($demo('link[href="../ximera.css"]').length, 1);
     assert.equal($demo('img[src="../demo-figure0.svg"]').length, 1);
+  });
 
-    // Middle (sample): has both
-    const sampleRaw = await readFile(path.join(outDir, 'all', 'sample.html'), 'utf8');
-    const $sample = load(sampleRaw);
-    assert.equal($sample('a.xourse-prev').attr('href'), 'demo.html');
-    assert.equal($sample('a.xourse-next').attr('href'), 'third.html');
+  it('invokes each scopedHook once per activity with the expected ctx', async () => {
+    const manifest = {
+      xourse: 'all',
+      title: 'My Course',
+      abstract: null,
+      parts: [{
+        title: null,
+        activities: [
+          { path: 'demo', title: 'Demo', abstract: null },
+          { path: 'sample', title: 'Sample', abstract: null },
+          { path: 'third', title: 'Third', abstract: null },
+        ],
+      }],
+      flatOrder: ['demo', 'sample', 'third'],
+    };
+    const calls = [];
+    const hook = async (_$, ctx) => { calls.push(ctx); };
+    await emitScopedCopies(manifest, outDir, [hook]);
 
-    // Last (third): no next
-    const thirdRaw = await readFile(path.join(outDir, 'all', 'third.html'), 'utf8');
-    const $third = load(thirdRaw);
-    assert.equal($third('a.xourse-next').length, 0);
-    assert.equal($third('a.xourse-prev').attr('href'), 'sample.html');
+    assert.equal(calls.length, 3);
+    assert.equal(calls[0].activityPath, 'demo');
+    assert.equal(calls[0].prev, null);
+    assert.equal(calls[0].next, 'sample');
+    assert.equal(calls[0].depth, 1);
+    assert.equal(calls[1].activityPath, 'sample');
+    assert.equal(calls[1].prev, 'demo');
+    assert.equal(calls[1].next, 'third');
+    assert.equal(calls[2].activityPath, 'third');
+    assert.equal(calls[2].next, null);
   });
 });
 
@@ -281,7 +309,6 @@ describe('materialize', () => {
     outDir = path.join(root, 'dist');
     await mkdir(outDir, { recursive: true });
 
-    // xourse landing page
     await writeFile(path.join(outDir, 'all.html'),
       '<html><head>' +
       '<meta name="description" content="xourse">' +
@@ -292,7 +319,6 @@ describe('materialize', () => {
       '<a class="activity" href="sample">sample</a>' +
       '</body></html>');
 
-    // Canonical activities
     await writeFile(path.join(outDir, 'demo.html'),
       '<html><head><title>Demo Title</title><link rel="stylesheet" href="ximera.css"></head>' +
       '<body><div class="abstract">Demo abstract.</div></body></html>');
@@ -305,22 +331,55 @@ describe('materialize', () => {
   it('emits landing page, manifest, and scoped copies', async () => {
     await materialize(root, outDir);
 
-    // Manifest
     const manifestRaw = await readFile(path.join(outDir, 'all.manifest.json'), 'utf8');
     const manifest = JSON.parse(manifestRaw);
     assert.equal(manifest.xourse, 'all');
     assert.equal(manifest.title, 'My Course');
     assert.deepEqual(manifest.flatOrder, ['demo', 'sample']);
 
-    // Landing page mutated in place
     const landing = await readFile(path.join(outDir, 'all.html'), 'utf8');
     const $l = load(landing);
     assert.equal($l('title').text(), 'My Course');
-    assert.equal($l('a.activity[href="all/demo.html"]').find('h2').text(), 'Demo Title');
-    assert.equal($l('a.activity[href="all/sample.html"]').find('h2').text(), 'Sample Title');
+    assert.equal($l('a.activity[href="all/demo.html"]').length, 1);
+    assert.equal($l('a.activity[href="all/sample.html"]').length, 1);
+    // No chrome injected by tex4npm alone.
+    assert.equal($l('a.activity h2').length, 0);
 
-    // Scoped copies exist
     assert.ok(existsSync(path.join(outDir, 'all', 'demo.html')));
     assert.ok(existsSync(path.join(outDir, 'all', 'sample.html')));
+  });
+
+  it('invokes injectLanding and injectScoped hooks from packages', async () => {
+    // Reset test HTML because the previous case mutated it.
+    await writeFile(path.join(outDir, 'all.html'),
+      '<html><head>' +
+      '<meta name="description" content="xourse">' +
+      '<meta name="title" content="My Course">' +
+      '<title></title>' +
+      '</head><body>' +
+      '<a class="activity" href="demo">demo</a>' +
+      '<a class="activity" href="sample">sample</a>' +
+      '</body></html>');
+
+    // Fake chrome package with an inline xourse hook module.
+    const pkgDir = await mkdtemp(path.join(os.tmpdir(), 'tex4npm-fake-chrome-'));
+    await writeFile(path.join(pkgDir, 'xourse.js'),
+      'export default {\n' +
+      '  injectLanding: async ($, ctx) => { $("body").append("<div class=\\"landing-hook\\">" + ctx.manifest.xourse + "</div>"); },\n' +
+      '  injectScoped: async ($, ctx) => { $("body").append("<div class=\\"scoped-hook\\">" + ctx.activityPath + "</div>"); },\n' +
+      '};\n');
+
+    const packages = [{ name: 'fake-chrome', dir: pkgDir, xourse: ['xourse.js'] }];
+    await materialize(root, outDir, packages);
+
+    const landing = await readFile(path.join(outDir, 'all.html'), 'utf8');
+    assert.match(landing, /<div class="landing-hook">all<\/div>/);
+
+    const scopedDemo = await readFile(path.join(outDir, 'all', 'demo.html'), 'utf8');
+    assert.match(scopedDemo, /<div class="scoped-hook">demo<\/div>/);
+    const scopedSample = await readFile(path.join(outDir, 'all', 'sample.html'), 'utf8');
+    assert.match(scopedSample, /<div class="scoped-hook">sample<\/div>/);
+
+    await rm(pkgDir, { recursive: true, force: true });
   });
 });

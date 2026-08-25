@@ -44,7 +44,7 @@ CLI commands:
 | `tex4ht` | Converts DVI → HTML using the .4ct/.4tc hook files |
 | `t4ht` | Post-processes the .lg file: CSS output, image handling |
 | `sage` | Optional: execute embedded SageMath computations |
-| `ximera.cls` | LaTeX document class (from XimeraProject/ximeraLatex) |
+| `ximera.cls` | LaTeX document class (built from `.dtx` sources in `ximera-core/latex/`) |
 
 ---
 

@@ -82,12 +82,12 @@ describe('findLatexPackages', () => {
 
   it('exposes cls and cfg arrays when declared', async () => {
     const r = await makeRoot([
-      ['ximeralatex', { latex: { cls: ['foo.cls'], cfg: ['foo.cfg'] } },
+      ['ximera-core', { latex: { cls: ['foo.cls'], cfg: ['foo.cfg'] } },
         { 'foo.cls': '', 'foo.cfg': '' }],
     ]);
     try {
       const pkgs = await findLatexPackages(r);
-      const xl = pkgs.find(p => p.name === 'ximeralatex');
+      const xl = pkgs.find(p => p.name === 'ximera-core');
       assert.deepEqual(xl.cls, ['foo.cls']);
       assert.deepEqual(xl.cfg, ['foo.cfg']);
     } finally {
@@ -173,7 +173,7 @@ describe('populateTexmf', () => {
 
   it('symlinks .cls and .cfg files alongside .sty/.4ht', async () => {
     const r = await makeRoot([
-      ['ximeralatex', { latex: { cls: ['ximera.cls'], cfg: ['ximera.cfg'] } },
+      ['ximera-core', { latex: { cls: ['ximera.cls'], cfg: ['ximera.cfg'] } },
         { 'ximera.cls': '', 'ximera.cfg': '' }],
     ]);
     try {
@@ -220,12 +220,12 @@ describe('generateBundleEntry', () => {
   it('omits the JS import for latex-only packages (hasJs=false)', async () => {
     const packages = [
       { name: 'ximera-foo', sty: [], css: [], hasJs: true },
-      { name: 'ximeralatex', sty: [], css: [], hasJs: false },
+      { name: 'ximera-core', sty: [], css: [], hasJs: false },
     ];
     await generateBundleEntry(tex4npmDir, packages);
     const content = await readFile(path.join(tex4npmDir, 'bundle-entry.js'), 'utf8');
     assert.ok(content.includes(`import "ximera-foo";`));
-    assert.ok(!content.includes(`import "ximeralatex";`));
+    assert.ok(!content.includes(`import "ximera-core";`));
   });
 });
 

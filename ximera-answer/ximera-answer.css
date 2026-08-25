@@ -12,24 +12,31 @@
   position: absolute;
   inset: 0;
   display: flex;
-  /* Center vertically instead of stretching. When <input> height is
-     imposed externally (via stretch), browsers do NOT vertically center
-     the single text row — they park it near the top of the content-box.
-     Giving the input its own intrinsic height (via line-height + padding)
-     and centering it inside the row is the reliable path. */
-  align-items: center;
+  /* Stretch children to the phantom's height so the input and Check
+     button always share the exact same outer height. If we centered
+     the input instead, the button (which stretches) would extend past
+     the input top+bottom whenever MathJax's phantom is slightly taller
+     than the input's intrinsic. Single-line <input> keeps its text
+     vertically centered on its own regardless of imposed height. */
+  align-items: stretch;
   box-sizing: border-box;
 }
 
 .ximera-answer-input {
   flex: 1 1 auto;
   min-width: 0;
-  /* Intrinsic height = line-height + 2×padding + 2×border. With
-     line-height:1 and 0.35em vertical padding the input renders at
-     ~1.7em, roughly a Bootstrap-input height, and the single-line text
-     sits centered by the browser's default input baseline handling. */
-  padding: 0.35em 0.5em;
-  line-height: 1;
+  /* Sizing recipe mirrors .ximera-btn--icon (see ximera-core.css) —
+     same font-size, padding, line-height, and min-height — so the
+     input and adjacent Check button share the exact intrinsic outer
+     height. Without this alignment the input's larger padding /
+     line-height / 1em font-size made it visibly taller than the
+     button, and the visible grey border drew attention to the
+     mismatch. Content-box is the default for <input> and matches the
+     button's box model. */
+  font-size: 0.95em;
+  padding: 0.15em 0.5em;
+  line-height: 1.2;
+  min-height: 1.6em;
   border: 1px solid var(--ximera-color-muted-border);
   /* Rounded on the outside (left) only — the right edge butts against
      the button. */
@@ -38,14 +45,9 @@
   background: #fff;
   /* Break the font *family* inheritance chain from the mjx-container
      ancestor — otherwise the input picks up MathJax's math font metrics
-     (large ascenders/descenders skew where the text row lands). But
-     keep font-size relative to the surrounding context so an \answer
-     inside a superscript / fraction / smaller math environment shrinks
-     to match — matching the Check button (also em-relative). */
+     (large ascenders/descenders skew where the text row lands). */
   font-family: system-ui, -apple-system, sans-serif;
-  font-size: 1em;
   color: inherit;
-  box-sizing: border-box;
   outline: none;
 }
 
@@ -66,13 +68,11 @@
 
 /* The Check button sits flush against the input's right edge. Override
    .ximera-btn--icon's default rounding so only the outer (right) corners
-   are rounded. align-self: stretch makes the button match the input's
-   intrinsic height (the group is align-items: center, so without this
-   override the button would only be as tall as its own content). */
+   are rounded. The parent group's align-items: stretch handles the
+   height equalization with the input. */
 .ximera-input-group .ximera-check-btn {
   border-radius: 0 var(--ximera-radius) var(--ximera-radius) 0;
   flex: 0 0 auto;
-  align-self: stretch;
   height: auto;
 }
 

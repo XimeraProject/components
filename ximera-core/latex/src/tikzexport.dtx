@@ -42,21 +42,31 @@
     \AtBeginDocument{\ximera@setincludeexternal}%
     \tikzexternalize[prefix=./,mode=graphics if exists]
   \else
-    % In pdflatex, generate one SVG per picture by running a child pdflatex
-    % compile (which produces a tightly-cropped one-page PDF via pgf's own
-    % \pdfpageheight/\pdfpagewidth adjustment), then converting the PDF to
-    % SVG with dvisvgm --pdf. --font-format=woff2 keeps glyphs as selectable
-    % text (embedding fonts as WOFF2) rather than converting them to path
-    % outlines.
+    % In pdflatex, generate one SVG per picture by running a child latex
+    % compile to DVI (tightly cropped to the picture via pgf's own bbox
+    % special), then converting the DVI to SVG with dvisvgm.
+    % --font-format=woff2 keeps glyphs as selectable text (embedding fonts
+    % as WOFF2) rather than converting them to path outlines.
     %
-    % Why not `latex + dvisvgm on DVI`: pgf's pgfsys-dvisvgm.def emits a
-    % `dvisvgm:bbox fix ... lock` special that pins the SVG bbox to pgf's
-    % own picture-bounds computation, which for pgfplots is oversized (it
-    % includes the axis-label reservation area even when no outer tick
-    % labels are drawn). The lock prevents dvisvgm's own --exact-bbox
-    % from tightening the result, so we get a large blank band below the
-    % plot. dvisvgm's --pdf mode reads the PDF's CropBox instead and gives
-    % us a tight SVG.
+    % Why DVI, not `pdflatex + dvisvgm --pdf`: in --pdf mode dvisvgm
+    % recovers a glyph's Unicode value from the PDF's ToUnicode map, which
+    % pdflatex does not write for CMEX/CMSY math delimiters. It then falls
+    % back to U+FFFD for *every* such glyph, so e.g. the `[` and `]` of a
+    % bmatrix inside a tikz node both collapse onto U+FFFD and the woff2
+    % subset can only bind that one codepoint to one glyph -- both brackets
+    % render as the same shape. On DVI, dvisvgm reads the font's own
+    % encoding (cmex10) and assigns each delimiter a distinct codepoint, so
+    % the brackets render correctly and stay selectable.
+    %
+    % The pgf bbox concern that once motivated --pdf does not reproduce on
+    % the current toolchain: pgf's `dvisvgm:bbox ... lock` pins the DVI bbox
+    % to the same bounds it writes into the PDF CropBox, so DVI-default and
+    % --pdf agree to well under 1pt (no blank band). Add --exact-bbox if a
+    % tighter ink-based box is ever wanted; it overrides the lock and is
+    % never larger than --pdf.
+    %
+    % Caveat: DVI mode cannot embed raster images (PNG/JPG); a tikzpicture
+    % that \includegraphics a bitmap must supply an EPS version instead.
     %
     % nonstopmode (not batch/halt-on-error) so the child compile survives
     % preamble warnings the same way the main compile does. If we halted
@@ -65,10 +75,10 @@
     % picture itself is fine and the main compile keeps going.
     \tikzset{
       /tikz/external/system call={
-        pdflatex \tikzexternalcheckshellescape
+        latex \tikzexternalcheckshellescape
         -interaction=nonstopmode
         -jobname "\image" "\\PassOptionsToClass{tikzexport}{ximera}\texsource";
-        dvisvgm --pdf --font-format=woff2 -o \image.svg \image.pdf
+        dvisvgm --font-format=woff2 -o \image.svg \image.dvi
       }
     }
     \tikzexternalize[optimize=false,prefix=./]

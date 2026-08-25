@@ -76,8 +76,16 @@ export async function injectDependencyMeta($, flsInputs, projectRoot) {
 }
 
 // Read the .xmjax file produced by ximera.cls and inject filtered \newcommand
-// definitions as <script type="math/tex"> inside div.preamble so MathJax can
-// render custom commands in the browser.
+// definitions inside a hidden \(...\) block so MathJax 3+ processes them and
+// the definitions become globally available for math elsewhere on the page.
+// (The legacy <script type="math/tex"> idiom is a MathJax 2 mechanism that
+// MathJax 3+ no longer honours.)
+//
+// The .xmjax stream includes tex4ht-oriented definitions whose bodies contain
+// literal HTML (`\HCode {<span>...</span>}`). Those angle brackets have to be
+// entity-escaped before they land inside our <div>, otherwise the browser
+// parses them as real tags and splits the math text node — MathJax then never
+// sees a matching `\)` and silently skips the whole block.
 export async function injectXmjax($, xmjaxPath) {
   let raw;
   try {
@@ -87,7 +95,13 @@ export async function injectXmjax($, xmjaxPath) {
   }
   const filtered = filterXmjaxCommands(raw);
   if (!filtered.trim()) return;
-  $('div.preamble').prepend(`<script type="math/tex">\n${filtered}\n</script>`);
+  const escaped = filtered
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  $('div.preamble').prepend(
+    `<div class="xmjax-macros" style="display:none">\\(\n${escaped}\n\\)</div>`,
+  );
 }
 
 // Keep only \newcommand, \DeclareMathOperator, and \newenvironment lines that

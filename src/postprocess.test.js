@@ -144,20 +144,24 @@ describe('injectXmjax', () => {
   });
   after(() => rm(dir, { recursive: true, force: true }));
 
-  it('prepends a math/tex script into div.preamble', async () => {
+  it('prepends a hidden \\(...\\) macros block into div.preamble', async () => {
     const xmjaxPath = path.join(dir, 'sample.xmjax');
     await writeFile(xmjaxPath, '\\newcommand {\\foo}[0]{bar}\n');
     const $ = load('<html><body><div class="preamble"></div></body></html>');
     await injectXmjax($, xmjaxPath);
-    const script = $('div.preamble script[type="math/tex"]');
-    assert.equal(script.length, 1);
-    assert.ok(script.html().includes('\\newcommand'));
+    const block = $('div.preamble div.xmjax-macros');
+    assert.equal(block.length, 1);
+    const html = block.html();
+    assert.ok(html.includes('\\newcommand'));
+    assert.ok(html.includes('\\('));
+    assert.ok(html.includes('\\)'));
+    assert.match(block.attr('style') ?? '', /display\s*:\s*none/);
   });
 
   it('does nothing when the file is absent', async () => {
     const $ = load('<html><body><div class="preamble"></div></body></html>');
     await assert.doesNotReject(() => injectXmjax($, path.join(dir, 'missing.xmjax')));
-    assert.equal($('div.preamble script').length, 0);
+    assert.equal($('div.preamble div.xmjax-macros').length, 0);
   });
 
   it('does nothing when no commands survive filtering', async () => {
@@ -165,7 +169,7 @@ describe('injectXmjax', () => {
     await writeFile(xmjaxPath, '\\renewcommand {\\foo}{}\n');
     const $ = load('<html><body><div class="preamble"></div></body></html>');
     await injectXmjax($, xmjaxPath);
-    assert.equal($('div.preamble script').length, 0);
+    assert.equal($('div.preamble div.xmjax-macros').length, 0);
   });
 });
 

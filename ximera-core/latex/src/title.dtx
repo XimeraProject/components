@@ -115,9 +115,21 @@
 
 %</classXimera>
 %    \end{macrocode}
-% Eliminate some formatting that we'll handle later with CSS
+% In HTML mode we don't typeset the title inline (chrome handles the
+% visible heading), but the head |<title>|/|<meta>| tags are plain-text
+% containers: tex4ht flattens any inline math there, dropping the superscript
+% in a title like |$\RR^3$|. To preserve the math, emit the title into a hidden body element
+% where tex4ht renders it as MathJax markup, exactly as it does for the
+% abstract. Downstream tooling reads |div.ximera-title| to build the table of
+% contents and other chrome with the math intact.
 %    \begin{macrocode}
 %<*htXimera>
-\renewcommand{\maketitle}{}
+% |\@title| is stored via |\protected@xdef|, so its math carries a leading
+% |\protect| token that MathJax cannot parse. Neutralise it (expand to
+% nothing) while emitting, inside a group so the change is local.
+\renewcommand{\maketitle}{%
+  \ifvmode\IgnorePar\fi\EndP\HCode{\Hnewline<div class="ximera-title" style="display:none">}\par
+  \begingroup\let\protect\@empty\@title\endgroup\par
+  \ifvmode\IgnorePar\fi\EndP\HCode{\Hnewline</div>}\par}
 %</htXimera>
 %    \end{macrocode}

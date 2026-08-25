@@ -55,15 +55,9 @@
 %</htXimera>
 %<*cfgXimera>
 %%  Although we accept many formats, SVG is preferred on the web.
-%%  Since we have a different mechanism for producing |alt| text, we
-%%  want to ignore tex4ht's own method fo producing alt text.
-%%  2024: is now in TeX4ht ...
-% \DeclareGraphicsExtensions{.jpg,.png,.gif,.svg}
-% \Configure{graphics*}
-% {svg}{
-%   {\Configure{Needs}{File: \Gin@base.svg}\Needs{}}
-%   \Picture[]{\csname Gin@base\endcsname.svg \csname a:Gin-dim\endcsname}%
-% }
+%%  tex4ht's svg- option wraps SVG images in <object type="image/svg+xml">
+%%  regardless of \Configure{graphics*}; the postprocess step in tex4npm
+%%  (unwrapSvgObjects) promotes the inner <img> and discards the <object>.
 %</cfgXimera>
 %    \end{macrocode}
 % This is a hack to kill |includegraphics| commands in

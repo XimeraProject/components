@@ -182,12 +182,12 @@ body h1, body h2, body h3, body h4 {
 
 /* ─── Bookkeeping wrappers emitted by tex4ht ─────────────────────────────── */
 
-/* .preamble carries the <script type="math/tex"> block of MathJax \newcommand
-   declarations tex4ht emits at the top of every page. It's runtime-only —
-   MathJax reads the script content and mounts nothing visible — but the div
-   itself is still in the flow. Force it invisible so it can never leak
-   whitespace or a stray text-node between the maketitle and the first
-   heading. */
+/* .preamble carries the hidden \(...\) block of MathJax \newcommand
+   declarations tex4npm injects at the top of every page. It's runtime-only —
+   MathJax processes the definitions so they become page-global, then mounts
+   nothing visible — but the div itself is still in the flow. Force it
+   invisible so it can never leak whitespace or a stray text-node between
+   the maketitle and the first heading. */
 .preamble {
   display: none;
 }

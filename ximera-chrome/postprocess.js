@@ -22,6 +22,21 @@ export default async function postprocess($, _ctx) {
   $body.append(renderHeader());
   $body.append($main);
   $body.append(renderFooter());
+
+  hoistMacros($body, $main);
+}
+
+// Move the \newcommand block (ximera-core emits it as a hidden
+// <div class="xmjax-macros">) to the very top of <body>, ahead of all chrome.
+// MathJax applies a \newcommand only to math that appears later in document
+// order, and the xourse hooks (xourse.js) inject breadcrumb / TOC / pager
+// titles ABOVE the activity content where the block lives — so without this
+// those titles would render before their macros (e.g. \RR) are defined.
+// It must be moved, not copied: a duplicate \newcommand block makes MathJax
+// error with "already defined".
+function hoistMacros($body, $main) {
+  const $macros = $main.find('.xmjax-macros').first();
+  if ($macros.length > 0) $body.prepend($macros);
 }
 
 // Inject font preconnect + stylesheet into <head>. Idempotent by marker id.

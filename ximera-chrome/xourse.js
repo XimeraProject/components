@@ -40,7 +40,7 @@ export async function injectLanding($, ctx) {
       // enriched title/abstract show. Idempotent-safe: on a second run,
       // the h2 check above short-circuits before we touch the DOM.
       $el.contents().filter((_, node) => node.type === 'text').remove();
-      if (a.title)    $el.append(`<h2>${escapeHtml(a.title)}</h2>`);
+      if (a.title)    $el.append(`<h2>${titleMarkup(a, a.path)}</h2>`);
       if (a.abstract) $el.append(`<h3>${a.abstract}</h3>`);
     }
   });
@@ -106,8 +106,8 @@ function ensureContainer($) {
 
 function renderBreadcrumb(manifest, activityPath, meta, landingHref) {
   const parts = [
-    `<a href="${escapeAttr(landingHref)}">${escapeHtml(manifest.title ?? manifest.xourse)}</a>`,
-    `<span class="xourse-crumb-current">${escapeHtml(meta.get(activityPath)?.title ?? activityPath)}</span>`,
+    `<a href="${escapeAttr(landingHref)}">${titleMarkup(manifest, manifest.xourse)}</a>`,
+    `<span class="xourse-crumb-current">${titleMarkup(meta.get(activityPath), activityPath)}</span>`,
   ];
   return `<nav class="xourse-breadcrumb" aria-label="Breadcrumb">${parts.join('<span class="xourse-crumb-sep"> › </span>')}</nav>`;
 }
@@ -115,7 +115,7 @@ function renderBreadcrumb(manifest, activityPath, meta, landingHref) {
 function renderToc(manifest, activityPath, _meta) {
   const parts = manifest.parts.map(part => {
     const items = part.activities.map(a => {
-      const label = escapeHtml(a.title ?? a.path);
+      const label = titleMarkup(a, a.path);
       const isCurrent = a.path === activityPath;
       const stateAttr = isCurrent ? ' data-state="current"' : '';
       if (isCurrent) {
@@ -124,7 +124,7 @@ function renderToc(manifest, activityPath, _meta) {
       const href = relPathBetween(activityPath, a.path);
       return `<li${stateAttr}><a href="${escapeAttr(href)}">${label}</a></li>`;
     }).join('');
-    const heading = part.title ? `<h4 class="xourse-toc-part">${escapeHtml(part.title)}</h4>` : '';
+    const heading = part.title ? `<h4 class="xourse-toc-part">${titleMarkup(part, part.title)}</h4>` : '';
     return `${heading}<ol class="xourse-toc-list">${items}</ol>`;
   }).join('');
   return `<aside class="xourse-toc" aria-label="Table of contents">${parts}</aside>`;
@@ -134,13 +134,13 @@ function renderPager(activityPath, prev, next, meta) {
   const prevBlock = prev
     ? `<a class="xourse-prev" href="${escapeAttr(relPathBetween(activityPath, prev))}">` +
         `<span class="xourse-pager-label">Previous</span>` +
-        `<span class="xourse-pager-title">${escapeHtml(meta.get(prev)?.title ?? prev)}</span>` +
+        `<span class="xourse-pager-title">${titleMarkup(meta.get(prev), prev)}</span>` +
       '</a>'
     : '<span class="xourse-prev xourse-pager-empty"></span>';
   const nextBlock = next
     ? `<a class="xourse-next" href="${escapeAttr(relPathBetween(activityPath, next))}">` +
         `<span class="xourse-pager-label">Next</span>` +
-        `<span class="xourse-pager-title">${escapeHtml(meta.get(next)?.title ?? next)}</span>` +
+        `<span class="xourse-pager-title">${titleMarkup(meta.get(next), next)}</span>` +
       '</a>'
     : '<span class="xourse-next xourse-pager-empty"></span>';
   return `<nav class="xourse-pager" aria-label="Activity navigation">${prevBlock}${nextBlock}</nav>`;
@@ -154,6 +154,15 @@ export function relPathBetween(fromActivity, toActivity) {
   const fromDir = path.posix.dirname(fromActivity);
   const rel = path.posix.relative(fromDir, `${toActivity}.html`);
   return rel || `./${path.posix.basename(toActivity)}.html`;
+}
+
+// Title markup for a manifest item (activity or part). Prefer titleHtml —
+// tex4ht-rendered HTML that preserves inline math as MathJax markup — and use
+// it verbatim. Fall back to the escaped plain-text title, then the fallback
+// (e.g. the activity path) when no title was compiled.
+function titleMarkup(item, fallback) {
+  if (item?.titleHtml) return item.titleHtml;
+  return escapeHtml(item?.title ?? fallback);
 }
 
 function escapeHtml(s) {

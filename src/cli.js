@@ -15,6 +15,7 @@ import { parseFlsFile, partitionOutputs, copyArtifacts, deleteTemps } from './ar
 import { postprocess } from './postprocess.js';
 import { materialize } from './xourse.js';
 import { watch } from './watch.js';
+import { deploy } from './deploy.js';
 
 function toOutPath(texPath, root, outDir) {
   return path.join(outDir, path.relative(root, texPath).replace(/\.tex$/, '.html'));
@@ -140,6 +141,27 @@ program
         onError: err => console.error(err.message),
       });
       process.on('SIGINT', async () => { await handle.close(); process.exit(0); });
+    } catch (err) {
+      console.error(err.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command('deploy <bucket>')
+  .description('Upload built files from outDir to an S3 bucket')
+  .option('--prefix <prefix>', 'S3 key prefix (deploy into a bucket subdirectory)')
+  .option('--delete', 'Remove S3 objects not present in outDir (sync mode)')
+  .action(async (bucket, opts) => {
+    try {
+      const config = await loadConfig();
+      console.log(`Deploying ${config.outDir} → s3://${bucket}${opts.prefix ? '/' + opts.prefix : ''}...`);
+      const { uploaded, deleted } = await deploy(config.outDir, bucket, {
+        prefix: opts.prefix ?? '',
+        delete: opts.delete ?? false,
+        onUpload: key => console.log(`  ↑ ${key}`),
+      });
+      console.log(`Done. ${uploaded} file(s) uploaded${deleted ? `, ${deleted} deleted` : ''}.`);
     } catch (err) {
       console.error(err.message);
       process.exit(1);

@@ -21,6 +21,7 @@ export async function postprocess(htmlPath, flsInputs, projectRoot, outDir, {
   const $ = load(raw);
 
   ensureCharset($);
+  unwrapSvgObjects($);
   removeEmptyParas($);
   await injectDependencyMeta($, flsInputs, projectRoot);
   if (xmjaxPath) await injectXmjax($, xmjaxPath);
@@ -51,6 +52,26 @@ export async function postprocess(htmlPath, flsInputs, projectRoot, outDir, {
 export function ensureCharset($) {
   $('meta[http-equiv="Content-Type"]').remove();
   if (!$('meta[charset]').length) $('head').prepend('<meta charset="utf-8">');
+}
+
+// tex4ht emits <object type="image/svg+xml"> as the SVG image wrapper.
+// Two forms appear in practice:
+//   1. With a fallback <img> inside (the old \Picture[] path) — promote the inner <img>.
+//   2. Empty, with only a `data` attribute (tikzexternalize via \includegraphics) —
+//      synthesize an <img src="..."> from the data attribute.
+// In both cases the <object> shell adds no value and is discarded.
+export function unwrapSvgObjects($) {
+  $('object[type="image/svg+xml"]').each((_, el) => {
+    const inner = $(el).find('img');
+    if (inner.length) {
+      $(el).replaceWith(inner);
+    } else {
+      const src = $(el).attr('data');
+      if (src) {
+        $(el).replaceWith(`<img src="${src}" class="graphics">`);
+      }
+    }
+  });
 }
 
 // Remove <p></p> elements (empty inner HTML after trimming).

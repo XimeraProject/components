@@ -7,7 +7,7 @@ import path from 'path';
 import {
   ensureCharset, removeEmptyParas, injectDependencyMeta, postprocess,
   injectXmjax, injectXmcss, filterXmjaxCommands,
-  stripOldXimeraScripts,
+  stripOldXimeraScripts, unwrapSvgObjects,
 } from './postprocess.js';
 
 describe('ensureCharset', () => {
@@ -29,6 +29,30 @@ describe('ensureCharset', () => {
     ensureCharset($);
     ensureCharset($);
     assert.equal($('meta[charset]').length, 1);
+  });
+});
+
+describe('unwrapSvgObjects', () => {
+  it('promotes an inner <img> when the <object> has fallback content', () => {
+    const $ = load('<object type="image/svg+xml" data="fig.svg"><img src="fig.svg" alt=""></object>');
+    unwrapSvgObjects($);
+    assert.equal($('object').length, 0);
+    assert.equal($('img').length, 1);
+    assert.equal($('img').attr('src'), 'fig.svg');
+  });
+
+  it('synthesizes an <img> from the data attribute when the <object> is empty', () => {
+    const $ = load('<object type="image/svg+xml" data="./main-figure4.svg" class="graphics"></object>');
+    unwrapSvgObjects($);
+    assert.equal($('object').length, 0);
+    assert.equal($('img').length, 1);
+    assert.equal($('img').attr('src'), './main-figure4.svg');
+  });
+
+  it('leaves non-svg <object> elements alone', () => {
+    const $ = load('<object type="application/pdf" data="doc.pdf"></object>');
+    unwrapSvgObjects($);
+    assert.equal($('object').length, 1);
   });
 });
 

@@ -379,11 +379,24 @@ p.noindent {
   margin-bottom: 0;
 }
 
+/* The optional environment title (\begin{theorem}[Ohm's Law]) is emitted
+   as this span. Set it in the same sans label font as the "Theorem." prelude
+   so the whole line reads as one label: "Theorem (Ohm's Law)."  Color is
+   applied per-family by the palette blocks below (matching the ::before). */
 .theorem-like-title {
+  font-family: var(--ximera-font-sans);
   font-weight: 700;
+  font-size: 0.95em;
   color: var(--ximera-color-muted-fg);
   margin-right: 0.4em;
 }
+
+/* Wrap the title in parentheses and carry the sentence-final period, so the
+   label becomes "Theorem (Ohm's Law)." — the ::before drops its own period
+   when a title is present (see the :has() rule below). Proof is excluded: it
+   keeps its plain italic title with no parentheses. */
+.theorem-like:not(.proof) > .theorem-like-title::before { content: " ("; }
+.theorem-like:not(.proof) > .theorem-like-title::after  { content: ")."; }
 
 /* Env name shown as a bold sans-serif label on the first line
    (Theorem, Definition, Example, …). Colored to match the family
@@ -397,46 +410,55 @@ p.noindent {
 .problem-environment.exercise::before,
 .problem-environment.question::before,
 .problem-environment.exploration::before {
+  content: var(--env-label) ".";
   font-family: var(--ximera-font-sans);
   font-weight: 700;
   font-size: 0.95em;
   margin-right: 0.4em;
 }
 
-.theorem-like.theorem::before      { content: "Theorem."; }
-.theorem-like.corollary::before    { content: "Corollary."; }
-.theorem-like.lemma::before        { content: "Lemma."; }
-.theorem-like.proposition::before  { content: "Proposition."; }
-.theorem-like.claim::before        { content: "Claim."; }
-.theorem-like.conjecture::before   { content: "Conjecture."; }
-.theorem-like.definition::before   { content: "Definition."; }
-.theorem-like.axiom::before        { content: "Axiom."; }
-.theorem-like.condition::before    { content: "Condition."; }
-.theorem-like.idea::before         { content: "Idea."; }
-.theorem-like.conclusion::before   { content: "Conclusion."; }
-.theorem-like.summary::before      { content: "Summary."; }
-.theorem-like.explanation::before  { content: "Explanation."; }
+/* When the environment carries a title span, the period belongs after the
+   parenthesized title ("Theorem (Ohm's Law)."), so drop it from the prelude
+   here and let .theorem-like-title::after supply it. */
+.theorem-like:has(> .theorem-like-title)::before {
+  content: var(--env-label);
+  margin-right: 0;
+}
 
-.theorem-like.formula::before      { content: "Formula."; }
-.theorem-like.model::before        { content: "Model."; }
-.theorem-like.procedure::before    { content: "Procedure."; }
-.theorem-like.template::before     { content: "Template."; }
+.theorem-like.theorem      { --env-label: "Theorem"; }
+.theorem-like.corollary    { --env-label: "Corollary"; }
+.theorem-like.lemma        { --env-label: "Lemma"; }
+.theorem-like.proposition  { --env-label: "Proposition"; }
+.theorem-like.claim        { --env-label: "Claim"; }
+.theorem-like.conjecture   { --env-label: "Conjecture"; }
+.theorem-like.definition   { --env-label: "Definition"; }
+.theorem-like.axiom        { --env-label: "Axiom"; }
+.theorem-like.condition    { --env-label: "Condition"; }
+.theorem-like.idea         { --env-label: "Idea"; }
+.theorem-like.conclusion   { --env-label: "Conclusion"; }
+.theorem-like.summary      { --env-label: "Summary"; }
+.theorem-like.explanation  { --env-label: "Explanation"; }
 
-.theorem-like.example::before      { content: "Example."; }
-.theorem-like.observation::before  { content: "Observation."; }
-.theorem-like.fact::before         { content: "Fact."; }
-.theorem-like.remark::before       { content: "Remark."; }
-.theorem-like.algorithm::before    { content: "Algorithm."; }
-.theorem-like.notation::before     { content: "Notation."; }
-.theorem-like.criterion::before    { content: "Criterion."; }
+.theorem-like.formula      { --env-label: "Formula"; }
+.theorem-like.model        { --env-label: "Model"; }
+.theorem-like.procedure    { --env-label: "Procedure"; }
+.theorem-like.template     { --env-label: "Template"; }
 
-.theorem-like.warning::before      { content: "Warning."; }
-.theorem-like.paradox::before      { content: "Paradox."; }
+.theorem-like.example      { --env-label: "Example"; }
+.theorem-like.observation  { --env-label: "Observation"; }
+.theorem-like.fact         { --env-label: "Fact"; }
+.theorem-like.remark       { --env-label: "Remark"; }
+.theorem-like.algorithm    { --env-label: "Algorithm"; }
+.theorem-like.notation     { --env-label: "Notation"; }
+.theorem-like.criterion    { --env-label: "Criterion"; }
 
-.problem-environment.problem::before      { content: "Problem."; }
-.problem-environment.exercise::before     { content: "Exercise."; }
-.problem-environment.question::before     { content: "Question."; }
-.problem-environment.exploration::before  { content: "Exploration."; }
+.theorem-like.warning      { --env-label: "Warning"; }
+.theorem-like.paradox      { --env-label: "Paradox"; }
+
+.problem-environment.problem      { --env-label: "Problem"; }
+.problem-environment.exercise     { --env-label: "Exercise"; }
+.problem-environment.question     { --env-label: "Question"; }
+.problem-environment.exploration  { --env-label: "Exploration"; }
 
 /* Green — theorem-family and constructive/definitional.
    Matches the "grass" palette in original-stylesheets/theorems.scss. */
@@ -566,6 +588,8 @@ p.noindent {
   margin: 1em 0;
 }
 .theorem-like.proof > .theorem-like-title {
+  font-family: var(--ximera-font-serif);
+  font-size: 1em;
   font-style: italic;
   font-weight: 400;
   color: var(--ximera-color-muted-fg);

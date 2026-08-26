@@ -240,6 +240,7 @@ export function rewriteRelativePaths($) {
 
   $('link[href]').each((_, el) => rewrite(el, 'href'));
   $('script[src]').each((_, el) => rewrite(el, 'src'));
+  $('img[src]').each((_, el) => rewrite(el, 'src'));
   $('source[src]').each((_, el) => rewrite(el, 'src'));
   $('a[href]').each((_, el) => rewrite(el, 'href'));
 }

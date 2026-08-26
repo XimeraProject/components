@@ -7,7 +7,7 @@ import path from 'path';
 import {
   ensureCharset, removeEmptyParas, injectDependencyMeta, postprocess,
   injectXmjax, injectXmcss, filterXmjaxCommands,
-  stripOldXimeraScripts, unwrapSvgObjects,
+  stripOldXimeraScripts, unwrapSvgObjects, inlineSvgImages,
 } from './postprocess.js';
 
 describe('ensureCharset', () => {
@@ -53,6 +53,43 @@ describe('unwrapSvgObjects', () => {
     const $ = load('<object type="application/pdf" data="doc.pdf"></object>');
     unwrapSvgObjects($);
     assert.equal($('object').length, 1);
+  });
+});
+
+describe('inlineSvgImages', () => {
+  let tmpDir;
+  before(async () => {
+    tmpDir = await mkdtemp(path.join(os.tmpdir(), 'inline-svg-'));
+    await writeFile(path.join(tmpDir, 'fig.svg'),
+      `<?xml version='1.0' encoding='UTF-8'?><svg xmlns='http://www.w3.org/2000/svg'><text>hello</text></svg>`);
+  });
+  after(() => rm(tmpDir, { recursive: true, force: true }));
+
+  it('replaces <img src="*.svg"> with the inline <svg> element', async () => {
+    const $ = load(`<p><img src="fig.svg"></p>`);
+    await inlineSvgImages($, tmpDir);
+    assert.equal($('img').length, 0);
+    assert.equal($('svg').length, 1);
+    assert.equal($('svg text').text(), 'hello');
+  });
+
+  it('strips the XML declaration before inserting', async () => {
+    const $ = load(`<img src="fig.svg">`);
+    await inlineSvgImages($, tmpDir);
+    assert.ok(!$.html().includes('<?xml'));
+  });
+
+  it('leaves <img src="*.svg"> in place when the file is missing', async () => {
+    const $ = load(`<img src="missing.svg">`);
+    await inlineSvgImages($, tmpDir);
+    assert.equal($('img').length, 1);
+  });
+
+  it('leaves non-SVG <img> elements alone', async () => {
+    const $ = load(`<img src="photo.png">`);
+    await inlineSvgImages($, tmpDir);
+    assert.equal($('img').length, 1);
+    assert.equal($('svg').length, 0);
   });
 });
 

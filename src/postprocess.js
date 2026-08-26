@@ -22,6 +22,7 @@ export async function postprocess(htmlPath, flsInputs, projectRoot, outDir, {
 
   ensureCharset($);
   unwrapSvgObjects($);
+  await inlineSvgImages($, path.dirname(htmlPath));
   removeEmptyParas($);
   await injectDependencyMeta($, flsInputs, projectRoot);
   if (xmjaxPath) await injectXmjax($, xmjaxPath);
@@ -72,6 +73,28 @@ export function unwrapSvgObjects($) {
       }
     }
   });
+}
+
+// Replace every <img src="*.svg"> with the inlined <svg> element from that
+// file. Inlining keeps the SVG text nodes in the page DOM so dvisvgm's woff2
+// glyphs remain selectable — loading via <img> treats the SVG as an opaque
+// image and loses selectability. The XML declaration and any leading/trailing
+// whitespace are stripped before insertion.
+export async function inlineSvgImages($, htmlDir) {
+  const imgs = $('img[src$=".svg"]').toArray();
+  for (const el of imgs) {
+    const src = $(el).attr('src');
+    const absPath = path.resolve(htmlDir, src);
+    let svgText;
+    try {
+      svgText = await readFile(absPath, 'utf8');
+    } catch {
+      continue; // SVG missing — leave the <img> as a broken-image fallback
+    }
+    // Strip XML declaration so cheerio doesn't re-serialize it as a comment
+    const svgContent = svgText.replace(/<\?xml[^?]*\?>\s*/i, '').trim();
+    $(el).replaceWith(svgContent);
+  }
 }
 
 // Remove <p></p> elements (empty inner HTML after trimming).

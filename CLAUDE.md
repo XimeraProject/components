@@ -12,9 +12,7 @@ This workspace is the active development area for a new npm-based Ximera build s
 |-----------|------|
 | `tex4npm/` | The build tool — compiles `.tex` → HTML (analogous to webpack for LaTeX) |
 | `ximera-core/` | Client-side JS runtime **and** the LaTeX class + tex4ht config (`.dtx` sources under `latex/`, compiled to `latex/dist/*.cls`/`.4ht`/`.cfg` by `npm run build:latex`) |
-| `original-server/` | Legacy jQuery client-side code — reference implementation being replaced by `ximera-core` |
-
-`my-course/` and `my-button/` are working examples of the author-facing npm workflow.
+| `ximera-*/` | Dual LaTeX + JS npm packages defining interactive components (`ximera-answer`, `ximera-foldable`, `ximera-multiple-choice`, …) |
 
 ---
 
@@ -28,10 +26,11 @@ node --test src/**/*.test.js          # run all tests
 node --test src/compile.test.js       # run a single test file
 ```
 
-### my-course (author-facing example)
+### Building a course
+
+From a course directory (a folder with `package.json` + `tex4npm.config.js`):
 
 ```bash
-cd my-course
 npm install
 npm run build      # tex4npm build — compile dirty .tex files to dist/
 npm run dev        # tex4npm watch — incremental watch mode
@@ -55,11 +54,11 @@ External tools required on `PATH`: `pdflatex`, `latex`, `tex4ht`, `t4ht` (from `
 An author writes a course in LaTeX and declares npm package dependencies:
 
 ```
-my-course/
-├── package.json          # depends on ximera-core, my-button, etc.
+course/
+├── package.json          # depends on ximera-core, ximera-foldable, etc.
 ├── tex4npm.config.js     # { root: 'src', outDir: 'dist' }
 └── src/
-    └── sample.tex        # \documentclass{ximera}; \usepackage{my-button}
+    └── sample.tex        # \documentclass{ximera}; \usepackage{ximera-foldable}
 ```
 
 Running `npm run build` (which calls `tex4npm build`) produces `dist/sample.html`, `dist/ximera.js`, and `dist/ximera.css`. The JS bundle makes the page interactive.
@@ -98,11 +97,11 @@ An npm package can be both a LaTeX package and a JavaScript module. It declares 
 
 ```json
 {
-  "name": "my-button",
+  "name": "ximera-foldable",
   "main": "index.js",
   "latex": {
-    "sty": ["my-button.sty"],
-    "css": ["dist/my-button.css"]
+    "sty": ["ximera-foldable.sty"],
+    "css": ["ximera-foldable.css"]
   }
 }
 ```
@@ -115,7 +114,7 @@ The `.sty` file defines how the macro renders in LaTeX (PDF) and in HTML mode vi
 
 ### ximera-core: the new client-side runtime
 
-`ximera-core` is an Elm-like MVU (model–update–render) runtime that replaces the old jQuery system in `original-server/`. It is itself an npm package with a `"latex"` field and is included in every course that depends on it.
+`ximera-core` is an Elm-like MVU (model–update–render) runtime that replaces the old jQuery system. It is itself an npm package with a `"latex"` field and is included in every course that depends on it.
 
 ```
 index.js      — public API: register(), dispatch(); wires agent events; mounts built-in components
@@ -136,16 +135,6 @@ Third-party ximera npm packages add custom interactive components by calling `re
 Alongside its JS runtime, `ximera-core/` owns the LaTeX class and tex4ht config: docstrip `.dtx` sources under `ximera-core/latex/`, extracted by `make` (via `npm run build:latex`) into `ximera-core/latex/dist/{ximera,xourse}.{cls,4ht}` and `ximera.cfg`. The `.4ht` files are the tex4ht configuration that tells it how to convert Ximera-specific LaTeX environments (`\begin{problem}`, `\begin{multipleChoice}`, `\answer{}`, etc.) into the specific HTML class structure that the JS runtime and CSS expect. Per-component macros (`\answer`, choice environments, etc.) live in their own pilot packages' `.sty`/`.4ht` files, not in this class.
 
 `ximera-core/package.json`'s `latex` field lists the compiled artifacts (`latex/dist/*.cls`, `latex/dist/*.4ht`, `latex/dist/ximera.cfg`) so `tex4npm/src/stage.js` symlinks them into every course's `.tex4npm/texmf/` before LaTeX compilation. `dist/` is gitignored and shipped in the npm tarball; a `prepare` npm script rebuilds it before `npm publish`.
-
-### original-server/ — legacy reference implementation
-
-These jQuery CommonJS modules implement the same interactive functionality as `ximera-core` but with a different architecture: jQuery plugins, `$.fn.extend`, differential synchronization over WebSocket (`database-websocket.js`) or AJAX (`database.js`), and xAPI/TinCan learning analytics (`tincan.js`). They are kept for reference. Key patterns:
-
-- `$.fn.persistentData(key, value)` — read/write element state that syncs to the server
-- `ximera:correct` / `ximera:complete` / `ximera:answer-needed` — jQuery custom events that bubble up the problem tree
-- `differentialSynchronization()` — jsondiffpatch-based two-way sync between local `DATABASE` and server shadow
-
----
 
 ## Key design decisions
 

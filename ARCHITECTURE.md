@@ -14,15 +14,13 @@ An overview of the workspace, how the pieces compose, and the direction the shar
 
 An author writes a course in LaTeX using the `ximera`/`xourse` document classes and declares their interactive components as ordinary npm dependencies. `tex4npm` compiles the LaTeX to HTML and bundles the JS/CSS of every declared component into a single page-level runtime. In the browser, `ximera-core` restores state from Modulus, dispatches messages as the learner interacts, and reports progress + page state back.
 
-The four workspaces have distinct responsibilities:
+The workspaces have distinct responsibilities:
 
 | Directory | Role | Analogy |
 |-----------|------|---------|
 | `tex4npm/` | Build system: `.tex` → HTML, plus esbuild bundle of component JS/CSS | webpack |
 | `ximera-core/` | Client-side MVU runtime (model, reducer, renderer, progress) **plus** the base LaTeX class + tex4ht config (`ximera.cls`, `xourse.cls`, `ximera.4ht` — extracted from `latex/*.dtx` sources into `latex/dist/`) | Redux + React DOM + React framework |
-| `my-button/` (and future `ximera-*` packages) | Dual LaTeX + JS npm packages defining interactive components | React components |
-| `original-server/` | Legacy jQuery client — reference only, being replaced | — |
-| `app.modulus-learning.org/` | LTI 1.3 tool: authenticated persistence, progress, LMS score passback | (external) backend |
+| `ximera-*/` (e.g. `ximera-answer`, `ximera-foldable`, `ximera-multiple-choice`) | Dual LaTeX + JS npm packages defining interactive components | React components |
 
 ---
 
@@ -58,11 +56,11 @@ The convention that makes a course composable: an npm package can declare both a
 ```json
 // package.json
 {
-  "name": "my-button",
+  "name": "my-component",
   "main": "index.js",
   "latex": {
-    "sty": ["my-button.sty"],
-    "css": ["dist/my-button.css"]
+    "sty": ["my-component.sty"],
+    "css": ["dist/my-component.css"]
   }
 }
 ```
@@ -81,7 +79,7 @@ The `.sty` file uses `\ifdefined\HCode` to branch on PDF vs HTML:
 The JS entry registers a mount function against a CSS selector:
 
 ```js
-// my-button/index.js
+// my-component/index.js
 import { register } from 'ximera-core';
 
 register('button', (el, dispatch) => {
@@ -190,7 +188,7 @@ Today `ximera-core` bundles every interactive type it knows about (answer blanks
 - `ximera-answer` — the `\answer{…}` blank inside math (currently `mountAnswerBlanks` in `ximera-core/index.js`).
 - `ximera-multiple-choice`, `ximera-select-all`, `ximera-word-choice` — currently `mountMultipleChoice`, `mountSelectAll`, `mountWordChoice`.
 - `ximera-free-response`, `ximera-hint`, `ximera-feedback` — the remaining built-ins.
-- `my-button` and other author-supplied components — already outside core.
+- author-supplied `ximera-*` component packages — already outside core.
 
 For that split to work, `ximera-core` needs to expose (and document) the contract those packages consume. That contract is essentially what `index.js` already does internally, promoted to a public surface:
 
@@ -212,20 +210,15 @@ The uncovered choice — reducer plugins vs. a fixed message vocabulary — is t
 ximera-two/
 ├── ARCHITECTURE.md          this file
 ├── CLAUDE.md                agent-facing project notes (overrides + pointers)
-├── PIPELINE.md              detailed .tex → .html pipeline (predates tex4npm; still useful)
 ├── tex4npm/                 build tool (webpack analogue)
 │   ├── bin/tex4npm.js       CLI entry
 │   └── src/                 cli, config, discover, deps, graph, dirty, compile,
 │                            artifacts, postprocess, bundle, stage, watch (+ tests)
 ├── ximera-core/             MVU runtime (index, model, update, render, progress)
 │   └── latex/               .dtx sources → dist/{ximera,xourse}.{cls,4ht}, ximera.cfg
-├── my-button/               minimal dual LaTeX+JS component (\button macro + click hook)
-├── my-course/               example course consuming the above via npm
-├── original-server/         legacy jQuery client (reference only)
-└── app.modulus-learning.org/  external: LTI tool, published agent, gradebook
+└── ximera-*/                dual LaTeX+JS component packages (answer, foldable,
+                             multiple-choice, select-all, word-choice, hint, …)
 ```
 
 For deeper dives:
 - `tex4npm/CLAUDE.md` — module-by-module notes on the build system.
-- `PIPELINE.md` — the raw `.tex → .html` mechanics.
-- `app.modulus-learning.org/docs/ARCHITECTURE.md` — the Modulus side of the boundary.

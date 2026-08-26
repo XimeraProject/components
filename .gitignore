@@ -1,6 +1,5 @@
 # Nested git repositories — each keeps its own history.
 /tex4npm/
-/app.modulus-learning.org/
 
 # npm build output
 dist/
@@ -11,8 +10,6 @@ node_modules/
 
 # tex4ht raw HTML leaks into the source dir next to the .tex; only dist/*.html
 # is authoritative. Same for the AUCTeX auto/ helper dir.
-/my-course/src/*.html
-/specs/fixtures/*.html
 auto/
 
 # LaTeX build intermediates. tex4npm normally sweeps these but leaves some
@@ -46,6 +43,9 @@ auto/
 .DS_Store
 .vscode/
 .idea/
+
+# Claude Code local settings (permissions, machine-specific paths)
+.claude/
 
 # npm scratch
 package-lock.json.tmp

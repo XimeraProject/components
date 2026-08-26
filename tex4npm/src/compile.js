@@ -1,0 +1,81 @@
+import { execa } from 'execa';
+import path from 'path';
+import { parseLgFile } from './artifacts.js';
+
+const TEX_CONFIG = 'ximera,charset=utf-8,-css';
+const TEX4HT_OPTIONS = ['-cunihtf', '-utf8'];
+const LATEX_FLAGS = [
+  '-recorder',
+  '-interaction=nonstopmode',
+  '-shell-escape',
+  '-file-line-error',
+];
+
+// The tex4ht.sty injection preamble extracted verbatim from the htlatex script.
+// When passed as the sole argument to latex, it loads tex4ht.sty with the
+// ximera configuration via \@documentclasshook before \begin{document}.
+const TEX4HT_PREAMBLE =
+  '\\makeatletter\\def\\HCode{\\futurelet\\HCode\\HChar}' +
+  '\\def\\HChar{\\ifx"\\HCode\\def\\HCode"##1"{\\Link##1}\\expandafter\\HCode\\else\\expandafter\\Link\\fi}' +
+  '\\def\\Link#1.a.b.c.{\\g@addto@macro\\@documentclasshook{\\RequirePackage[#1,html]{tex4ht}}' +
+  '\\let\\HCode\\documentstyle\\def\\documentstyle{\\let\\documentstyle\\HCode\\expandafter' +
+  '\\def\\csname tex4ht\\endcsname{#1,html}\\def\\HCode####1{\\documentstyle[tex4ht,}' +
+  '\\@ifnextchar[{\\HCode}{\\documentstyle[tex4ht]}}}\\makeatother\\HCode ';
+
+// Build the single latex argument that injects tex4ht.sty and inputs the file.
+export function tex4htArg(stem) {
+  return `${TEX4HT_PREAMBLE}${TEX_CONFIG}.a.b.c.\\input ${stem}`;
+}
+
+// Build the TEXINPUTS value that prepends the staged .sty files.
+export function makeTexInputs(tex4npmTexmf) {
+  const existing = process.env.TEXINPUTS ?? '';
+  return `${tex4npmTexmf}//:${existing}`;
+}
+
+
+// Compile a single .tex file through the full pipeline:
+//   pdflatex → latex×passes → tex4ht → t4ht
+//
+// Returns the list of files tex4ht wrote to the source directory.
+//
+// run: injectable subprocess executor (defaults to execa). Tests pass a
+// recording fake to verify the call sequence without spawning real processes.
+export async function compile(texPath, config, { run = execa } = {}) {
+  const dir = path.dirname(texPath);
+  const stem = path.basename(texPath, '.tex');
+
+  // Only latex/pdflatex need the augmented TEXINPUTS to find staged .sty files.
+  // tex4ht and t4ht use their own search paths and must not get a modified env.
+  const latexEnv = { ...process.env, TEXINPUTS: makeTexInputs(config.tex4npmTexmf) };
+  // latex exits 1 on recoverable warnings under -interaction=nonstopmode; reject:false
+  // lets us continue. If no .dvi is produced, tex4ht will fail with a real error.
+  const latexOpts = { cwd: dir, env: latexEnv, reject: false };
+  const tex4htOpts = { cwd: dir };
+
+  const pdflatexArg =
+    `\\PassOptionsToClass{tikzexport}{ximera}` +
+    `\\PassOptionsToClass{xake}{ximera}` +
+    `\\PassOptionsToClass{xake}{xourse}` +
+    `\\nonstopmode\\input{${stem}}`;
+
+  // pdflatex pass: tikzexport + .aux generation
+  await run('pdflatex', [...LATEX_FLAGS, pdflatexArg], latexOpts);
+
+  // latex passes with tex4ht.sty injection (2 or 3, per config.passes)
+  for (let i = 0; i < config.passes; i++) {
+    await run('latex', [...LATEX_FLAGS, tex4htArg(stem)], latexOpts);
+  }
+
+  // tex4ht: DVI → HTML. Writes stem.lg listing its output files.
+  await run('tex4ht', [`-f/${stem}`, ...TEX4HT_OPTIONS], tex4htOpts);
+
+  // Read .lg before t4ht so we have the authoritative file list from tex4ht.
+  const tex4htFiles = await parseLgFile(path.join(dir, `${stem}.lg`), dir);
+
+  // t4ht: post-processing (.lg → CSS, images, etc.)
+  await run('t4ht', [`-f/${stem}`], tex4htOpts);
+
+  return tex4htFiles;
+}
+

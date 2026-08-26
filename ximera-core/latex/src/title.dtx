@@ -27,7 +27,10 @@
 %    \begin{macrocode}
 %<*classXimera>
 \let\title\relax
-\newcommand{\title}[1][]{{\protected@xdef\@pretitle{#1}}\protected@xdef\@title}
+\newcommand{\title}[2][]{%
+  \protected@xdef\@pretitle{#1}%
+  \protected@xdef\@title{#2}%
+  \gdef\@titleraw{#2}}
 
 \title{}
 
@@ -124,12 +127,23 @@
 % contents and other chrome with the math intact.
 %    \begin{macrocode}
 %<*htXimera>
-% |\@title| is stored via |\protected@xdef|, so its math carries a leading
-% |\protect| token that MathJax cannot parse. Neutralise it (expand to
-% nothing) while emitting, inside a group so the change is local.
+% We emit |\@titleraw| here, not |\@title|. |\@title| is built with
+% |\protected@xdef|, which inserts a literal |\protect| token before every
+% fragile command (e.g.\ |\mathbb|). tex4ht's inline-math converter copies
+% those tokens verbatim into the MathJax markup by name, so |\@title| yields
+% |\(\protect \mathbb {R}^3\)| --- and |\let\protect| cannot fix it, since the
+% token is emitted by its name regardless of meaning. Worse, letting |\protect|
+% expand to nothing (|\@empty|) makes the math scanner recurse forever and hangs
+% the compile. |\@titleraw| stores the title exactly as authored, with no
+% |\protect| tokens, so tex4ht produces clean |\(\mathbb {R}^3\)|.
+%
+% Because |\@titleraw| is unexpanded, author macros (e.g.\ |\RR|) survive as
+% |\RR| in the MathJax markup. That renders correctly wherever the page's
+% MathJax knows the macro --- which is the same guarantee body math already
+% relies on (see \texttt{.preamble} / xmjax injection).
 \renewcommand{\maketitle}{%
   \ifvmode\IgnorePar\fi\EndP\HCode{\Hnewline<div class="ximera-title" style="display:none">}\par
-  \begingroup\let\protect\@empty\@title\endgroup\par
+  \@titleraw\par
   \ifvmode\IgnorePar\fi\EndP\HCode{\Hnewline</div>}\par}
 %</htXimera>
 %    \end{macrocode}

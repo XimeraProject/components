@@ -1,0 +1,19 @@
+{
+  "name": "@ximera/dialogue",
+  "version": "2.0.0",
+  "type": "module",
+  "latex": {
+    "sty": [
+      "ximera-dialogue.sty"
+    ],
+    "4ht": [
+      "ximera-dialogue.4ht"
+    ],
+    "css": [
+      "ximera-dialogue.css"
+    ]
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

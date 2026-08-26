@@ -1,0 +1,16 @@
+{
+  "name": "@ximera/xkcd",
+  "version": "2.0.0",
+  "type": "module",
+  "latex": {
+    "sty": [
+      "ximera-xkcd.sty"
+    ],
+    "4ht": [
+      "ximera-xkcd.4ht"
+    ]
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

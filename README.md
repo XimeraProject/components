@@ -17,10 +17,10 @@ A webpack project has a `package.json`, declares its dependencies with `npm`, an
          LaTeX (.tex)      ─►     npm dependencies      ─►    the result
                                   (each = TeX + JS)
 
-  \documentclass{ximera}         ximera-core                 interactive page:
-  \usepackage{ximera-hint}       ximera-hint                 gradable answers,
-  \begin{problem} … \end{...}    ximera-multiple-choice      hints, progress,
-                                  ximera-chrome               LMS score sync
+  \documentclass{ximera}         @ximera/core                interactive page:
+  \usepackage{ximera-hint}       @ximera/hint                gradable answers,
+  \begin{problem} … \end{...}    @ximera/multiple-choice     hints, progress,
+                                  @ximera/chrome              LMS score sync
 ```
 
 An author declares dependencies the ordinary npm way:
@@ -29,10 +29,10 @@ An author declares dependencies the ordinary npm way:
 {
   "name": "my-course",
   "dependencies": {
-    "ximera-core": "*",
-    "ximera-chrome": "*",
-    "ximera-hint": "*",
-    "ximera-multiple-choice": "*"
+    "@ximera/core": "*",
+    "@ximera/chrome": "*",
+    "@ximera/hint": "*",
+    "@ximera/multiple-choice": "*"
   }
 }
 ```
@@ -63,7 +63,7 @@ The trick that makes this work is a convention: an npm package can be **both** a
 
 ```json
 {
-  "name": "ximera-foldable",
+  "name": "@ximera/foldable",
   "main": "index.js",
   "latex": {
     "sty": ["ximera-foldable.sty"],
@@ -87,11 +87,11 @@ So a single `\usepackage{ximera-foldable}` pulls in the LaTeX macros, the tex4ht
 
 ---
 
-## `ximera-core`: the base class and the runtime
+## `@ximera/core`: the base class and the runtime
 
-Every course depends on `ximera-core`. It is itself one of these dual packages, and it plays two roles:
+Every course depends on `@ximera/core`. It is itself one of these dual packages, and it plays two roles:
 
-**On the LaTeX side**, it owns the `ximera` and `xourse` document classes (`\documentclass{ximera}`) and the base tex4ht configuration — the rules that emit each `\begin{problem}…\end{problem}` as a `<div class="problem-environment">` with the structure the runtime expects. These are compiled from `.dtx` sources under `ximera-core/latex/`.
+**On the LaTeX side**, it owns the `ximera` and `xourse` document classes (`\documentclass{ximera}`) and the base tex4ht configuration — the rules that emit each `\begin{problem}…\end{problem}` as a `<div class="problem-environment">` with the structure the runtime expects. These are compiled from `.dtx` sources under `core/latex/`.
 
 **On the JavaScript side**, it is a small Elm-style **model → update → render** runtime:
 
@@ -103,9 +103,9 @@ Third-party components plug in by calling `register(selector, mount)` (plus `reg
 
 ---
 
-## `ximera-chrome`: the look of the page
+## `@ximera/chrome`: the look of the page
 
-Where `ximera-core` provides the machinery, **`ximera-chrome`** provides the *style and shell* — the visual identity wrapped around the raw compiled content. It supplies the page-level CSS (typography, layout, theorem-environment styling, colors) and, for **xourse** files (Ximera's multi-activity "courses"), it builds the navigational chrome: the header and footer, the breadcrumb, the table of contents, and the previous/next pager — all via build-time `postprocess` and `xourse` hooks that rewrite the compiled HTML.
+Where `@ximera/core` provides the machinery, **`@ximera/chrome`** provides the *style and shell* — the visual identity wrapped around the raw compiled content. It supplies the page-level CSS (typography, layout, theorem-environment styling, colors) and, for **xourse** files (Ximera's multi-activity "courses"), it builds the navigational chrome: the header and footer, the breadcrumb, the table of contents, and the previous/next pager — all via build-time `postprocess` and `xourse` hooks that rewrite the compiled HTML.
 
 Swap in a different chrome package and the same LaTeX content takes on a completely different appearance.
 
@@ -115,33 +115,33 @@ Swap in a different chrome package and the same LaTeX content takes on a complet
 
 Everything else in this repo is an interactive or presentational **component**: a dual LaTeX + JS package that owns one piece of the page. Each combines the `.tex` macros (how it renders in PDF and how tex4ht turns it into HTML) with the JavaScript that makes the emitted HTML behave.
 
-**Interactive** — dispatch messages into the `ximera-core` model, contribute to progress, and persist their state:
+**Interactive** — dispatch messages into the `@ximera/core` model, contribute to progress, and persist their state:
 
 | Package | LaTeX | What it does |
 |---------|-------|--------------|
-| `ximera-answer` | `\answer{…}` | Fill-in-the-blank answer inside math, checked against the author's value |
-| `ximera-multiple-choice` | `multipleChoice` | Single-correct choice list |
-| `ximera-select-all` | `selectAll` | Choose-all-that-apply list |
-| `ximera-word-choice` | `\wordChoice` | Inline pick-the-right-word |
-| `ximera-free-response` | `freeResponse` | Free-text response |
-| `ximera-hint` | `hint` | Progressively revealed hints |
-| `ximera-foldable` | `foldable` / `accordion` / `expandable` | Collapsible callouts and accordions |
+| `@ximera/answer` | `\answer{…}` | Fill-in-the-blank answer inside math, checked against the author's value |
+| `@ximera/multiple-choice` | `multipleChoice` | Single-correct choice list |
+| `@ximera/select-all` | `selectAll` | Choose-all-that-apply list |
+| `@ximera/word-choice` | `\wordChoice` | Inline pick-the-right-word |
+| `@ximera/free-response` | `freeResponse` | Free-text response |
+| `@ximera/hint` | `hint` | Progressively revealed hints |
+| `@ximera/foldable` | `foldable` / `accordion` / `expandable` | Collapsible callouts and accordions |
 
 **Presentational & content** — style or embed, no graded state:
 
 | Package | LaTeX | What it does |
 |---------|-------|--------------|
-| `ximera-dialogue` | `dialogue` | Styled conversational exchanges |
-| `ximera-verbatim` | code environments | Syntax-styled code / verbatim blocks |
-| `ximera-video` | `\youtube` | Embedded YouTube videos |
-| `ximera-xkcd` | `\xkcd` | Embedded xkcd comics |
+| `@ximera/dialogue` | `dialogue` | Styled conversational exchanges |
+| `@ximera/verbatim` | code environments | Syntax-styled code / verbatim blocks |
+| `@ximera/video` | `\youtube` | Embedded YouTube videos |
+| `@ximera/xkcd` | `\xkcd` | Embedded xkcd comics |
 
 **Shared LaTeX helpers** — macros reused by the components above:
 
 | Package | Provides |
 |---------|----------|
-| `ximera-choice` | The shared `\choice` / `\otherchoice` / `\inlinechoice` macros used by multiple-choice and select-all |
-| `ximera-proof` | The `proof` environment |
+| `@ximera/choice` | The shared `\choice` / `\otherchoice` / `\inlinechoice` macros used by multiple-choice and select-all |
+| `@ximera/proof` | The `proof` environment |
 
 Adding a new interactive component means writing a new package with a `"latex"` field, a `.sty` that emits recognizable HTML, and a `register(selector, mount)` call — nothing in core has to change.
 
@@ -149,7 +149,7 @@ Adding a new interactive component means writing a new package with a `"latex"` 
 
 ## Persistence and grading: Modulus
 
-The components never talk to a server directly. State and grades flow through **Modulus** via the `@modulus-learning/agent` package. On page load the agent restores the learner's saved **page state** (so revealed hints, entered answers, and uncovered problems come back exactly as they were left). As the learner interacts, `ximera-core` reports the updated page state and a `[0, 1]` **progress score** back to the agent, which handles authentication, offline buffering, and — over LTI 1.3 — passing the score back to the LMS gradebook (Canvas and friends).
+The components never talk to a server directly. State and grades flow through **Modulus** via the `@modulus-learning/agent` package. On page load the agent restores the learner's saved **page state** (so revealed hints, entered answers, and uncovered problems come back exactly as they were left). As the learner interacts, `@ximera/core` reports the updated page state and a `[0, 1]` **progress score** back to the agent, which handles authentication, offline buffering, and — over LTI 1.3 — passing the score back to the LMS gradebook (Canvas and friends).
 
 The activity code stays blissfully unaware of any of this: it dispatches messages and updates a model; Modulus takes care of the round-trip.
 
@@ -158,11 +158,11 @@ The activity code stays blissfully unaware of any of this: it dispatches message
 ## Repository layout
 
 ```
-components/
-├── tex4npm/        the build tool — resolves npm deps, compiles .tex → HTML, bundles JS/CSS
-├── ximera-core/    base ximera/xourse LaTeX classes + the MVU client runtime
-├── ximera-chrome/  page styling + xourse navigation chrome
-└── ximera-*/       interactive and presentational components (answer, hint, foldable, …)
+.
+├── tex4npm/   the build tool — resolves npm deps, compiles .tex → HTML, bundles JS/CSS
+├── core/      base ximera/xourse LaTeX classes + the MVU client runtime (@ximera/core)
+├── chrome/    page styling + xourse navigation chrome (@ximera/chrome)
+└── */         interactive and presentational components (answer, hint, foldable, …)
 ```
 
 ---

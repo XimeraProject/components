@@ -46,3 +46,6 @@ auto/
 
 # npm scratch
 package-lock.json.tmp
+
+# npm credentials — never commit the auth token
+.npmrc

@@ -1,0 +1,21 @@
+{
+  "name": "@ximera/choice",
+  "version": "2.0.0",
+  "type": "module",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "latex": {
+    "sty": [
+      "ximera-choice.sty"
+    ],
+    "4ht": [
+      "ximera-choice.4ht"
+    ]
+  },
+  "scripts": {
+    "test": "node --test 'test/**/*.test.js'"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

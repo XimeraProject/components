@@ -1,9 +1,0 @@
-{
-  "name": "ximera-xkcd",
-  "version": "0.1.0",
-  "type": "module",
-  "latex": {
-    "sty": ["ximera-xkcd.sty"],
-    "4ht": ["ximera-xkcd.4ht"]
-  }
-}

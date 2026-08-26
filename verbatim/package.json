@@ -1,0 +1,19 @@
+{
+  "name": "@ximera/verbatim",
+  "version": "2.0.0",
+  "type": "module",
+  "latex": {
+    "sty": [
+      "ximera-verbatim.sty"
+    ],
+    "4ht": [
+      "ximera-verbatim.4ht"
+    ],
+    "css": [
+      "ximera-verbatim.css"
+    ]
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

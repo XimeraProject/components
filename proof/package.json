@@ -1,0 +1,16 @@
+{
+  "name": "@ximera/proof",
+  "version": "2.0.0",
+  "type": "module",
+  "latex": {
+    "sty": [
+      "ximera-proof.sty"
+    ],
+    "4ht": [
+      "ximera-proof.4ht"
+    ]
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

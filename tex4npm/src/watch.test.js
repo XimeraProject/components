@@ -35,6 +35,7 @@ describe('watch', () => {
     config = {
       root,
       outDir,
+      configDir: root,
       tex4npmDir: path.join(root, '.tex4npm'),
       tex4npmTexmf: path.join(root, '.tex4npm', 'texmf'),
       workers: 1,

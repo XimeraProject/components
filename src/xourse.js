@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, readdir } from 'fs/promises';
+import { readFile, writeFile, mkdir, readdir, copyFile } from 'fs/promises';
 import { load } from 'cheerio';
 import { pathToFileURL } from 'url';
 import path from 'path';
@@ -29,13 +29,14 @@ export function removeSpuriousAnchors($) {
 // compiled HTML in outDir.
 export async function parseManifest($, xourseStem, srcDir, outDir) {
   const title = ($('meta[name="title"]').attr('content') ?? '').trim() || null;
+  const titleHtml = extractTitleHtml($);
   const abstract = $('div.abstract').html()?.trim() ?? null;
 
   // Walk the body in document order. `.card.part h1` opens a new part,
   // `a.activity` accumulates under the current part. Activities before any
   // part live under an implicit part with title: null.
   const parts = [];
-  let current = { title: null, activities: [] };
+  let current = { title: null, titleHtml: null, activities: [] };
 
   const bodyChildren = $('body').find('h1.card.part, a.activity[href]').toArray();
   for (const el of bodyChildren) {
@@ -45,7 +46,7 @@ export async function parseManifest($, xourseStem, srcDir, outDir) {
       if (current.activities.length > 0 || current.title !== null) {
         parts.push(current);
       }
-      current = { title: $el.text().trim(), activities: [] };
+      current = { title: $el.text().trim(), titleHtml: $el.html()?.trim() || null, activities: [] };
     } else if ($el.is('a.activity')) {
       const rawHref = $el.attr('href');
       if (!rawHref) continue;
@@ -70,10 +71,12 @@ export async function parseManifest($, xourseStem, srcDir, outDir) {
         const raw = await readFile(activityHtmlPath, 'utf8');
         const $a = load(raw);
         a.title = $a('title').text().trim() || null;
+        a.titleHtml = extractTitleHtml($a);
         a.abstract = $a('div.abstract').html()?.trim() ?? null;
       } catch {
         console.warn(`  ! xourse ${xourseStem}: activity ${a.path} has no compiled HTML at ${activityHtmlPath}`);
         a.title = null;
+        a.titleHtml = null;
         a.abstract = null;
       }
     }
@@ -81,7 +84,21 @@ export async function parseManifest($, xourseStem, srcDir, outDir) {
 
   const flatOrder = parts.flatMap(p => p.activities.map(a => a.path));
 
-  return { xourse: xourseStem, title, abstract, parts, flatOrder };
+  return { xourse: xourseStem, title, titleHtml, abstract, parts, flatOrder };
+}
+
+// The class emits the activity/xourse title into a hidden
+// <div class="ximera-title"> (see title.dtx) so tex4ht renders any inline
+// math as MathJax markup — the head <title>/<meta> tags are plain-text only.
+// Return the title's inner HTML (unwrapping tex4ht's <h1 class="titleHead">
+// shell) so chrome can place the markup in its own elements, or null if the
+// element is absent.
+function extractTitleHtml($doc) {
+  const $div = $doc('div.ximera-title');
+  if ($div.length === 0) return null;
+  const $h1 = $div.find('h1.titleHead').first();
+  const html = $h1.length > 0 ? $h1.html() : $div.html();
+  return html?.trim() || null;
 }
 
 // Write manifest as JSON alongside the xourse landing page.
@@ -143,6 +160,9 @@ export async function emitScopedCopies(manifest, outDir, scopedHooks = []) {
     }
     const $ = load(raw);
 
+    const target = path.join(outDir, xourseStem, `${activityPath}.html`);
+    await copyImagesForScopedCopy(path.dirname(canonicalHtml), path.dirname(target), $);
+
     rewriteRelativePaths($);
 
     // Strip build-time dependency metadata from scoped copy.
@@ -163,7 +183,6 @@ export async function emitScopedCopies(manifest, outDir, scopedHooks = []) {
     // Dispatch chrome-package hooks. Each hook receives the same ctx.
     const prev = i > 0 ? flat[i - 1] : null;
     const next = i + 1 < flat.length ? flat[i + 1] : null;
-    const target = path.join(outDir, xourseStem, `${activityPath}.html`);
     const ctx = { manifest, activityPath, prev, next, depth, outDir, htmlPath: target };
     for (const hook of scopedHooks) {
       await hook($, ctx);
@@ -174,11 +193,28 @@ export async function emitScopedCopies(manifest, outDir, scopedHooks = []) {
   }
 }
 
-// Rewrite href/src attributes that are relative (not absolute URLs or
-// data:/mailto:/#anchor) by prepending "../" to account for the extra
-// directory depth of a xourse-scoped copy.
-export function rewriteRelativePaths($) {
-  const isSkipped = (val) => (
+// Copy every <img src> referenced by $ from canonicalDir into scopedDir,
+// preserving the relative path so <img src> attributes need no rewriting.
+export async function copyImagesForScopedCopy(canonicalDir, scopedDir, $) {
+  const srcs = new Set();
+  $('img[src]').each((_, el) => {
+    const src = $(el).attr('src');
+    if (src && !isAbsoluteOrSpecial(src)) srcs.add(src);
+  });
+  for (const src of srcs) {
+    const srcPath = path.resolve(canonicalDir, src);
+    const destPath = path.resolve(scopedDir, src);
+    await mkdir(path.dirname(destPath), { recursive: true });
+    try {
+      await copyFile(srcPath, destPath);
+    } catch {
+      // image missing from canonical build — skip silently
+    }
+  }
+}
+
+function isAbsoluteOrSpecial(val) {
+  return (
     !val ||
     val.startsWith('http://') ||
     val.startsWith('https://') ||
@@ -188,16 +224,22 @@ export function rewriteRelativePaths($) {
     val.startsWith('mailto:') ||
     val.startsWith('data:')
   );
+}
 
+// Rewrite href/src attributes that are relative (not absolute URLs or
+// data:/mailto:/#anchor) by prepending "../" to account for the extra
+// directory depth of a xourse-scoped copy.
+// Images (<img src>) are excluded: they are copied alongside the scoped HTML
+// by copyImagesForScopedCopy(), so their paths need no adjustment.
+export function rewriteRelativePaths($) {
   const rewrite = (el, attr) => {
     const val = $(el).attr(attr);
-    if (isSkipped(val)) return;
+    if (isAbsoluteOrSpecial(val)) return;
     $(el).attr(attr, `../${val}`);
   };
 
   $('link[href]').each((_, el) => rewrite(el, 'href'));
   $('script[src]').each((_, el) => rewrite(el, 'src'));
-  $('img[src]').each((_, el) => rewrite(el, 'src'));
   $('source[src]').each((_, el) => rewrite(el, 'src'));
   $('a[href]').each((_, el) => rewrite(el, 'href'));
 }

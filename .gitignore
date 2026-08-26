@@ -1,6 +1,3 @@
-# Nested git repositories — each keeps its own history.
-/tex4npm/
-
 # npm build output
 dist/
 node_modules/

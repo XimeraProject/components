@@ -169,33 +169,7 @@ components/
 
 ## Getting started
 
-```bash
-# 1. Bootstrap ximera-core's LaTeX artifacts (dist/ is gitignored)
-cd ximera-core && npm install && npm run build:latex
-
-# 2. From a course directory (package.json + tex4npm.config.js):
-npm install
-npm run build      # compile dirty .tex files into dist/
-npm run dev        # incremental watch mode
-```
-
-### Running the build tool's tests
-
-```bash
-cd tex4npm
-node --test src/**/*.test.js
-```
-
-### Requirements
-
-A working TeX installation providing these on your `PATH`:
-
-- `pdflatex`, `latex`
-- `tex4ht`, `t4ht` (`tlmgr install tex4ht`)
-- `makeindex`
-- optionally `sage` (for `sagetex` content)
-
-Plus Node.js for `tex4npm` and the component packages.
+Jim Fowler is working on some instructions.
 
 ---
 
